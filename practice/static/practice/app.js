@@ -299,7 +299,8 @@
 
   /** One results row. Same language as the round header, e.g.
    *  "F# Dominant 7 Arpeggio — A Shape · Ascending"; the key + scale get
-   *  the visual emphasis, the form/direction stay muted. */
+   *  the visual emphasis, the form stays muted and the direction pops
+   *  in accent orange (matching the round header). */
   function resultRow(r) {
     var li = document.createElement("li");
     var name = document.createElement("span");
@@ -307,7 +308,11 @@
     name.textContent = r.key + " " + r.scale;
     var meta = document.createElement("span");
     meta.className = "result-meta";
-    meta.textContent = r.display_label + " · " + r.direction;
+    meta.textContent = r.display_label + " · ";
+    var dir = document.createElement("span");
+    dir.className = "result-direction";
+    dir.textContent = r.direction;
+    meta.appendChild(dir);
     li.appendChild(name);
     li.appendChild(meta);
     return li;

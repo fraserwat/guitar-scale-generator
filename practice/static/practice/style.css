@@ -136,7 +136,9 @@ button:disabled { cursor: not-allowed; }
 .round-scale { font-weight: 600; }
 .round-label { color: var(--text); }
 .round-sep { margin: 0 0.15rem; }
-.round-direction { color: var(--muted); font-style: italic; }
+/* Ascending/Descending pops in accent orange so the direction is
+   unmissable at a glance (same treatment in the results rows below). */
+.round-direction { color: var(--accent); font-weight: 700; font-style: italic; }
 
 .neck, .tab {
   width: 100%;
@@ -315,5 +317,6 @@ kbd {
 
 .result-name { font-weight: 600; }
 .result-meta { font-size: 0.85rem; color: var(--muted); }
+.result-direction { color: var(--accent); font-weight: 700; font-style: italic; }
 
 #again-btn { margin-top: 0.25rem; }
