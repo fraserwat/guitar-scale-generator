@@ -10,22 +10,55 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Read configuration from a local .env file (see .env.example), if present.
+# Real environment variables take precedence over .env values.
+load_dotenv(BASE_DIR / ".env")
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-6md!rv6j5qh3lpr_e!yllet+#8))+g166jfm8!1zuws8(it$#9"
+def _env_bool(name: str, default: str) -> bool:
+    """Parse a boolean env var robustly ('true'/'1'/'yes'/'on' -> True)."""
+    return os.environ.get(name, default).strip().lower() in ("1", "true", "yes", "on")
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Defaults to true so fresh dev clones work; set DJANGO_DEBUG=false in prod.
+DEBUG = _env_bool("DJANGO_DEBUG", default="true")
 
-ALLOWED_HOSTS = []
+# SECURITY WARNING: keep the secret key used in production secret!
+# Set DJANGO_SECRET_KEY in .env (see .env.example for how to generate one).
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if DEBUG:
+        # DEV ONLY: ephemeral key so fresh clones can run tests without a
+        # .env. Regenerated on every process start — sessions/signatures do
+        # not survive restarts. Never used when DEBUG is false.
+        from django.core.management.utils import get_random_secret_key
+
+        SECRET_KEY = get_random_secret_key()
+    else:
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false. "
+            "Generate one with: python -c \"from django.core.management.utils "
+            "import get_random_secret_key; print(get_random_secret_key())\""
+        )
+
+# Comma-separated hostnames, e.g. "example.com,www.example.com".
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get(
+        "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1"
+    ).split(",")
+    if host.strip()
+]
 
 
 # Application definition
