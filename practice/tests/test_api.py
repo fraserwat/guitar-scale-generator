@@ -132,14 +132,12 @@ class RoundApiTests(TestCase):
             seen["categories"].add(data["category"])
 
         # Randomisation actually varies (P(failure) is astronomically small
-        # over 100 uniform draws from 41 forms).
-        self.assertEqual(seen["categories"],
-                         {"pentatonic", "arpeggio", "scale"})
+        # over 100 uniform draws from the 3 shipped major-scale forms).
+        self.assertEqual(seen["categories"], {"scale"})
         self.assertEqual(seen["directions"], {"Ascending", "Descending"})
-        self.assertGreaterEqual(len(seen["forms"]), 10)
+        self.assertEqual(seen["forms"], set(theory.load_fingerings()))
         self.assertGreaterEqual(len(seen["keys"]), 5)
-        self.assertGreaterEqual(len(seen["scales"]), 3)
-        self.assertTrue(seen["forms"] <= set(theory.load_fingerings()))
+        self.assertEqual(seen["scales"], {"Major Scale"})
 
     def test_round_rejects_post(self):
         resp = self.client.post("/api/round/")
