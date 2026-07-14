@@ -1,0 +1,15 @@
+# Hand-authored TAB written in the example key A (root = low E fret 5).
+# Convention: the form starts on the root — nothing below the low root is played.
+id: natural-minor-scale-e-root-4th-finger-form
+scale: natural_minor_scale
+name: "Natural Minor Scale — 4th Finger Form (E-root)"
+starting_finger: 4
+anchor: root_low_e
+example_key: A
+tab:
+  E: [5]
+  A: [2, 3, 5]
+  D: [2, 3, 5]
+  G: [2, 4, 5]
+  B: [3, 5, 6]
+  e: [3, 5]

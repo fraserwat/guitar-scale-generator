@@ -151,15 +151,16 @@ class RoundApiTests(TestCase):
             seen["categories"].add(data["category"])
 
         # Randomisation actually varies (P(failure) is astronomically small
-        # over 400 uniform draws from the 26 shipped forms: each form is
-        # missed with p = (25/26)^400 ~ 1.5e-7).
+        # over 400 uniform draws from the 32 shipped forms: each form is
+        # missed with p = (31/32)^400 ~ 3.1e-6).
         self.assertEqual(seen["categories"],
                          {"scale", "arpeggio", "pentatonic"})
         self.assertEqual(seen["directions"], {"Ascending", "Descending"})
         self.assertEqual(seen["forms"], set(theory.load_fingerings()))
         self.assertGreaterEqual(len(seen["keys"]), 5)
         self.assertEqual(seen["scales"], {
-            "Major Scale", "Major 7 Arpeggio", "Dominant 7 Arpeggio",
+            "Major Scale", "Natural Minor Scale",
+            "Major 7 Arpeggio", "Dominant 7 Arpeggio",
             "Minor 7 Arpeggio", "Minor 7b5 Arpeggio",
             "Diminished 7 Arpeggio",
             "Major Pentatonic", "Minor Pentatonic",
@@ -266,8 +267,8 @@ class RoundKeySpellingTests(TestCase):
 
 
 # Throttling is covered by test_ratelimit.py; disabled here so these
-# validation tests can POST freely (26 forms alone exceed the default
-# per-minute cap inside one test-run window).
+# validation tests can POST freely (32 forms plus the invalid-payload
+# cases exceed the default per-minute cap inside one test-run window).
 @override_settings(API_RATE_LIMIT_PER_MINUTE=0)
 class LogApiTests(TestCase):
     def post_log(self, payload, raw=None):

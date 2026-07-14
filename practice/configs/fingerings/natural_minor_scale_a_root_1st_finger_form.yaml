@@ -1,0 +1,15 @@
+# Hand-authored TAB written in the example key A (root = A string fret 12).
+# Convention: the form starts on the root — nothing below the low root is played.
+id: natural-minor-scale-a-root-1st-finger-form
+scale: natural_minor_scale
+name: "Natural Minor Scale — 1st Finger Form (A-root)"
+starting_finger: 1
+anchor: root_low_a
+example_key: A
+tab:
+  E: []
+  A: [12, 14, 15]
+  D: [12, 14, 15]
+  G: [12, 14, 16]
+  B: [13, 15, 17]
+  e: [13, 15, 17]

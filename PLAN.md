@@ -152,6 +152,29 @@ labelled by shape ("E Shape" … "D Shape"):
       menu. Pointer cursor + hover brighten signal the affordance.
       Cache-bust bumps: style.css v7, app.js v6.
 
+## Natural minor scale finger forms (2026-07-14, background agent)
+
+All six natural-minor finger forms (E + A roots × 1st/2nd/4th finger),
+hand-authored TABs in A transcribed note-for-note from "A minor scale, six
+different scale forms" (Shalfi's Lesson Materials):
+`natural_minor_scale_{e,a}_root_{1st,2nd,4th}_finger_form.yaml`.
+32 forms total (12 scale + 10 arpeggio + 10 pentatonic).
+
+- [x] Pure config addition — `natural_minor_scale` already existed in
+      scales.yaml; zero theory.py/view/JS changes (forms, labels, and
+      round payloads are config-driven).
+- [x] IDs use the full scale id (`natural-minor-scale-…`) so future
+      harmonic/melodic minor variants stay unambiguous.
+- [x] Tests: 141 all green — form counts/id set bumped 26 → 32; the six
+      minor TABs pinned note-for-note to the source PDF; A-root minor
+      forms join the 12th-position/silent-low-E checks; randomisation
+      test now expects "Natural Minor Scale" in 400 draws.
+- [x] LogApiTests now runs with the per-IP throttle off
+      (`@override_settings(API_RATE_LIMIT_PER_MINUTE=0)`): its POST count
+      (one per form + every invalid payload) crossed the 60/min default
+      once forms hit 32. Throttle behaviour keeps its own suite
+      (test_ratelimit.py).
+
 ## Deferred (unchanged)
 - 7-string · Users/auth · Spaced repetition algorithm · Flat/sharp spelling · Config hot-reload
 - Restore full 41-form config set post-validation (rerun `scripts/generate_fingerings.py`, revert test count changes from v3 prune)

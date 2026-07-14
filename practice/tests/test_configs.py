@@ -72,11 +72,11 @@ VALID_ARPEGGIO_FORM = {
     },
 }
 
-# Shipped configs: the E-string-root and A-string-root major-scale finger
-# forms, the five seventh-chord arpeggios in 1st and 2nd finger forms
-# (hand-authored TABs derived from the same-finger major-scale forms), and
-# the five CAGED boxes of each pentatonic scale.
-EXPECTED_FORM_COUNTS = {"scale": 6, "arpeggio": 10, "pentatonic": 10}
+# Shipped configs: the E-string-root and A-string-root finger forms of the
+# major and natural minor scales, the five seventh-chord arpeggios in 1st
+# and 2nd finger forms (hand-authored TABs derived from the same-finger
+# major-scale forms), and the five CAGED boxes of each pentatonic scale.
+EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 10, "pentatonic": 10}
 EXPECTED_FORM_IDS = {
     "major-pentatonic-c-shape",
     "major-pentatonic-a-shape",
@@ -94,6 +94,12 @@ EXPECTED_FORM_IDS = {
     "major-scale-a-root-1st-finger-form",
     "major-scale-a-root-2nd-finger-form",
     "major-scale-a-root-4th-finger-form",
+    "natural-minor-scale-e-root-1st-finger-form",
+    "natural-minor-scale-e-root-2nd-finger-form",
+    "natural-minor-scale-e-root-4th-finger-form",
+    "natural-minor-scale-a-root-1st-finger-form",
+    "natural-minor-scale-a-root-2nd-finger-form",
+    "natural-minor-scale-a-root-4th-finger-form",
     "major7-arpeggio-e-root-1st-finger-form",
     "dominant7-arpeggio-e-root-1st-finger-form",
     "minor7-arpeggio-e-root-1st-finger-form",
@@ -122,14 +128,14 @@ def load_temp(*forms):
 
 
 class ShippedConfigTests(SimpleTestCase):
-    def test_26_configs_load_and_validate(self):
+    def test_32_configs_load_and_validate(self):
         fingerings = theory.load_fingerings()
-        self.assertEqual(len(fingerings), 26)
+        self.assertEqual(len(fingerings), 32)
 
     def test_count_by_category(self):
-        """3 E-root + 3 A-root major-scale finger forms + 5 seventh-chord
-        arpeggios in 1st and 2nd finger forms + 2 pentatonic scales x 5
-        CAGED boxes."""
+        """3 E-root + 3 A-root finger forms for each of the major and
+        natural minor scales + 5 seventh-chord arpeggios in 1st and 2nd
+        finger forms + 2 pentatonic scales x 5 CAGED boxes."""
         counts = {}
         for form in theory.load_fingerings().values():
             counts[form["category"]] = counts.get(form["category"], 0) + 1
@@ -283,12 +289,54 @@ class ShippedConfigTests(SimpleTestCase):
         fingerings = theory.load_fingerings()
         for form_id in ("major-scale-a-root-1st-finger-form",
                         "major-scale-a-root-2nd-finger-form",
-                        "major-scale-a-root-4th-finger-form"):
+                        "major-scale-a-root-4th-finger-form",
+                        "natural-minor-scale-a-root-1st-finger-form",
+                        "natural-minor-scale-a-root-2nd-finger-form",
+                        "natural-minor-scale-a-root-4th-finger-form"):
             with self.subTest(form=form_id):
                 form = fingerings[form_id]
                 self.assertEqual(form["anchor"], "root_low_a")
                 self.assertIn(12, form["tab"]["A"])
                 self.assertEqual(form["tab"]["E"], [])
+
+    # The six natural-minor finger forms, pinned note-for-note to their
+    # source ("A minor scale, six different scale forms", Shalfi's Lesson
+    # Materials) — the TAB is hand-authored convention, so any drift from
+    # the source is a regression even if it still validates musically.
+    EXPECTED_MINOR_SCALE_TABS = {
+        "natural-minor-scale-e-root-1st-finger-form": {
+            "E": [5, 7, 8], "A": [5, 7, 8], "D": [5, 7, 9],
+            "G": [5, 7, 9], "B": [6, 8, 10], "e": [],
+        },
+        "natural-minor-scale-e-root-2nd-finger-form": {
+            "E": [5, 7], "A": [3, 5, 7], "D": [3, 5, 7],
+            "G": [4, 5, 7], "B": [5, 6], "e": [3, 5],
+        },
+        "natural-minor-scale-e-root-4th-finger-form": {
+            "E": [5], "A": [2, 3, 5], "D": [2, 3, 5],
+            "G": [2, 4, 5], "B": [3, 5, 6], "e": [3, 5],
+        },
+        "natural-minor-scale-a-root-1st-finger-form": {
+            "E": [], "A": [12, 14, 15], "D": [12, 14, 15],
+            "G": [12, 14, 16], "B": [13, 15, 17], "e": [13, 15, 17],
+        },
+        "natural-minor-scale-a-root-2nd-finger-form": {
+            "E": [], "A": [12, 14], "D": [10, 12, 14],
+            "G": [10, 12, 14], "B": [12, 13], "e": [10, 12, 13],
+        },
+        "natural-minor-scale-a-root-4th-finger-form": {
+            "E": [], "A": [12], "D": [9, 10, 12],
+            "G": [9, 10, 12], "B": [10, 12, 13], "e": [10, 12],
+        },
+    }
+
+    def test_natural_minor_tabs_match_the_source_note_for_note(self):
+        fingerings = theory.load_fingerings()
+        for form_id, tab in self.EXPECTED_MINOR_SCALE_TABS.items():
+            with self.subTest(form=form_id):
+                form = fingerings[form_id]
+                self.assertEqual(form["scale"], "natural_minor_scale")
+                self.assertEqual(form["tab"], tab)
 
 
 class ValidTempConfigTests(SimpleTestCase):
