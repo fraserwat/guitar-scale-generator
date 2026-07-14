@@ -192,7 +192,6 @@ class ShippedConfigTests(SimpleTestCase):
         for form in theory.load_fingerings().values():
             self.assertIsInstance(form["name"], str)
             self.assertIn(form["anchor"], theory.ANCHOR_STRATEGIES)
-            self.assertEqual(form["example_key"], theory.EXAMPLE_KEY)
             self.assertEqual(set(form["tab"]), set(theory.TAB_STRINGS))
             self.assertEqual(set(form["offsets"]), {1, 2, 3, 4, 5, 6})
             self.assertIn(form["category"], theory.CATEGORIES)
@@ -372,6 +371,13 @@ class BrokenConfigTests(SimpleTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             write_forms(tmp, *forms)
             theory.load_fingerings(tmp)  # expected to raise
+
+    def test_overlong_id_rejected(self):
+        """Every loadable id must fit the AttemptLog.form_id column."""
+        bad = {**VALID_FORM, "id": "x" * (theory.FORM_ID_MAX_LENGTH + 1)}
+        with self.assertRaises(theory.ConfigError) as ctx:
+            self.load_broken(bad)
+        self.assertIn(str(theory.FORM_ID_MAX_LENGTH), str(ctx.exception))
 
     def test_out_of_scale_fret_rejected(self):
         # Fret 6 on the D string is G#, not in A minor pentatonic.

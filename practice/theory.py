@@ -36,11 +36,6 @@ FINGERINGS_DIR = CONFIG_DIR / "fingerings"
 # proper per-key diatonic spelling instead (see spell_scale / resolve_form).
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
-# Flat-spelled chromatic names (fallback only — in-scale notes of a flat key
-# are spelled diatonically, e.g. Cb in Gb major, which no chromatic table
-# can express).
-FLAT_NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]
-
 KEYS = list(NOTE_NAMES)  # all 12 pitch classes, named with sharps
 
 # The 5 accidental (black-key) roots and their flat enharmonic spellings.
@@ -76,6 +71,12 @@ STANDARD_TUNING = {
 
 # Number of fret positions shown in the display window.
 WINDOW_SIZE = 6
+
+# Form ids are stored in the AttemptLog.form_id column (max_length=64);
+# bounding them here keeps every loadable id insertable on strict backends
+# (SQLite would silently accept longer values). No Django import: the model
+# mirrors this constant rather than the reverse.
+FORM_ID_MAX_LENGTH = 64
 
 # Anchor strategy -> the string carrying the root that transposition anchors
 # on. Each strategy maps a key to the fret of its root on that string;
@@ -219,24 +220,6 @@ def spell_scale(key: str, intervals: list[int]) -> dict[int, str]:
     return {(root_pc + i) % 12: spell_interval(key, i) for i in intervals}
 
 
-def root_fret_low_e(key: str) -> int:
-    """Fret of the root note on the low E string (string 6).
-
-    Returns 12 instead of 0 for E, so the display window always has a full
-    fret line on its left edge.
-    """
-    return anchor_fret(key, "root_low_e")
-
-
-def root_fret_low_a(key: str) -> int:
-    """Fret of the root note on the A string (string 5).
-
-    Returns 12 instead of 0 for A — the same convention as root_fret_low_e,
-    so A-root forms in the key of A sit at the 12th position.
-    """
-    return anchor_fret(key, "root_low_a")
-
-
 # =============================================================================
 # TODO(anchor strategies): future anchor strategies are one new entry in
 # ANCHOR_ROOT_STRINGS (selected per-fingering via the `anchor` field of the
@@ -334,6 +317,11 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
     form_id = raw["id"]
     if not isinstance(form_id, str) or not form_id.strip():
         raise ConfigError(f"{path}: 'id' must be a non-empty string")
+    if len(form_id) > FORM_ID_MAX_LENGTH:
+        raise ConfigError(
+            f"{path}: 'id' must be at most {FORM_ID_MAX_LENGTH} characters "
+            f"(the attempt-log column bound), got {len(form_id)}"
+        )
 
     scale_id = raw["scale"]
     if scale_id not in scales:
@@ -484,7 +472,6 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
         "caged_shape": caged_shape,
         "starting_finger": starting_finger,
         "anchor": raw["anchor"],
-        "example_key": raw["example_key"],
         "tab": {label: sorted(frets) for label, frets in tab.items()},
         # Anchor-relative offsets derived from the TAB; everything downstream
         # (resolve_form, the diagrams) consumes these. Pre-sorted so
@@ -567,14 +554,15 @@ def resolve_form(
     anchor = anchor_fret(key, form["anchor"])
 
     # Per-key spelling: flat keys get a diatonic pc -> name map built from
-    # the scale's intervals (every note of a valid form is in the scale, so
-    # the map is total in practice; FLAT_NOTE_NAMES is a defensive fallback).
+    # the scale's intervals. The map is total — the loader rejects any form
+    # note outside its scale — so a KeyError here means a validator bug and
+    # should surface, not be papered over.
     if key in FLAT_KEYS:
         scales = load_scales(scales_path)
         spelling = spell_scale(key, scales[form["scale"]]["intervals"])
 
         def name_of(pc: int) -> str:
-            return spelling.get(pc, FLAT_NOTE_NAMES[pc])
+            return spelling[pc]
     else:
         name_of = note_name
 

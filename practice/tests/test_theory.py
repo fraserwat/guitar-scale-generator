@@ -249,48 +249,33 @@ class SpellingTests(SimpleTestCase):
                     theory.spell_interval("Gb", bad)
 
 
-class RootFretTests(SimpleTestCase):
-    def test_root_fret_low_e_all_12_keys(self):
+class AnchorFretTests(SimpleTestCase):
+    def test_root_low_e_all_12_keys(self):
         """Every key, including the E -> 12 (not 0) edge case."""
         self.assertEqual(set(EXPECTED_ROOT_FRETS), set(theory.KEYS))
         for key, fret in EXPECTED_ROOT_FRETS.items():
             with self.subTest(key=key):
-                self.assertEqual(theory.root_fret_low_e(key), fret)
+                self.assertEqual(theory.anchor_fret(key, "root_low_e"), fret)
 
-    def test_root_fret_low_e_flat_keys_match_sharp_equivalents(self):
-        for sharp, flat in theory.SHARP_TO_FLAT.items():
-            with self.subTest(sharp=sharp, flat=flat):
-                self.assertEqual(theory.root_fret_low_e(flat),
-                                 theory.root_fret_low_e(sharp))
-
-    def test_root_fret_low_a_all_12_keys(self):
+    def test_root_low_a_all_12_keys(self):
         """Every key, including the A -> 12 (not 0) edge case."""
         self.assertEqual(set(EXPECTED_ROOT_FRETS_LOW_A), set(theory.KEYS))
         for key, fret in EXPECTED_ROOT_FRETS_LOW_A.items():
             with self.subTest(key=key):
-                self.assertEqual(theory.root_fret_low_a(key), fret)
+                self.assertEqual(theory.anchor_fret(key, "root_low_a"), fret)
 
-    def test_root_fret_low_a_flat_keys_match_sharp_equivalents(self):
-        for sharp, flat in theory.SHARP_TO_FLAT.items():
-            with self.subTest(sharp=sharp, flat=flat):
-                self.assertEqual(theory.root_fret_low_a(flat),
-                                 theory.root_fret_low_a(sharp))
+    def test_flat_keys_match_sharp_equivalents(self):
+        for anchor in theory.ANCHOR_STRATEGIES:
+            for sharp, flat in theory.SHARP_TO_FLAT.items():
+                with self.subTest(anchor=anchor, sharp=sharp, flat=flat):
+                    self.assertEqual(theory.anchor_fret(flat, anchor),
+                                     theory.anchor_fret(sharp, anchor))
 
     def test_unknown_key_raises(self):
-        for fn in (theory.root_fret_low_e, theory.root_fret_low_a):
-            with self.subTest(fn=fn.__name__):
+        for anchor in theory.ANCHOR_STRATEGIES:
+            with self.subTest(anchor=anchor):
                 with self.assertRaises(ValueError):
-                    fn("X")
-
-    def test_anchor_fret_root_low_e_matches(self):
-        for key in theory.VALID_KEYS:
-            self.assertEqual(theory.anchor_fret(key, "root_low_e"),
-                             theory.root_fret_low_e(key))
-
-    def test_anchor_fret_root_low_a_matches(self):
-        for key in theory.VALID_KEYS:
-            self.assertEqual(theory.anchor_fret(key, "root_low_a"),
-                             theory.root_fret_low_a(key))
+                    theory.anchor_fret("X", anchor)
 
     def test_anchor_fret_root_low_d_all_12_keys(self):
         """Every key, including the D -> 12 (not 0) edge case (the D-shape
@@ -337,7 +322,6 @@ class TabRoundTripTests(SimpleTestCase):
     def test_example_key_resolution_reproduces_authored_tab(self):
         for form_id, form in theory.load_fingerings().items():
             with self.subTest(form=form_id):
-                self.assertEqual(form["example_key"], theory.EXAMPLE_KEY)
                 _, notes = theory.resolve_form(form_id, theory.EXAMPLE_KEY)
                 expected = {
                     theory.TAB_STRINGS[label]: frets

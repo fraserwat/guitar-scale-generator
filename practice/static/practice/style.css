@@ -148,16 +148,14 @@ button:disabled { cursor: not-allowed; }
   margin-bottom: 1.25rem;
 }
 
-/* Root-note pips: app.js sets fill="#f59f3d" as an SVG presentation
-   attribute; the CSS fill property below wins over it, so we can brighten
-   the roots (and ring the neck dots) without touching JS. Keep the hex in
-   these selectors in sync with app.js. */
-.neck circle[fill="#f59f3d"] {
+/* Root-note pips: app.js tags roots with class="root"; the CSS fill wins
+   over the inline presentation attributes on the other notes. */
+.neck .root {
   fill: var(--accent);
   stroke: var(--text);
   stroke-width: 2;
 }
-.tab text[fill="#f59f3d"] { fill: var(--accent); }
+.tab .root { fill: var(--accent); font-weight: 700; }
 
 .hint { color: var(--muted); font-size: 0.95rem; margin: 1.25rem 0; }
 kbd {
