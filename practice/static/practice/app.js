@@ -34,6 +34,9 @@
   var resultsListIncorrectEl = document.getElementById("results-list-incorrect");
   var againBtn = document.getElementById("again-btn");
 
+  // Server-rendered hint markup (index.html), restored at each new round.
+  var HINT_DEFAULT = hintEl.innerHTML;
+
   // ---- State --------------------------------------------------------------
   var phase = "idle"; // idle | loading | play | reveal | results
   var timeLeft = 0;
@@ -117,7 +120,7 @@
       var cx = NECK.left + (note.fret - round.window_start + 0.5) * NECK.fretW;
       var cy = stringY(note.string);
       var dot = note.is_root
-        ? el("circle", { cx: cx, cy: cy, r: 10, fill: "#f59f3d" })
+        ? el("circle", { cx: cx, cy: cy, r: 10, "class": "root" })
         : el("circle", {
             cx: cx, cy: cy, r: 9,
             fill: "#0c0f14", stroke: "#eef2f8", "stroke-width": 2.5
@@ -171,11 +174,10 @@
         x: cx - 8, y: cy - 7, width: 16, height: 14, fill: "#0c0f14"
       }));
       var num = el("text", {
-        x: cx, y: cy + 5, "text-anchor": "middle",
-        fill: note.is_root ? "#f59f3d" : "#eef2f8",
-        "font-size": 13, "font-family": "monospace",
-        "font-weight": note.is_root ? "bold" : "normal"
+        x: cx, y: cy + 5, "text-anchor": "middle", fill: "#eef2f8",
+        "font-size": 13, "font-family": "monospace"
       }, String(note.fret));
+      if (note.is_root) num.setAttribute("class", "root");
       num.appendChild(el("title", {}, note.note_name));
       numbers.appendChild(num);
     });
@@ -223,8 +225,7 @@
     currentRound = null;
     correctBtn.disabled = true;
     incorrectBtn.disabled = true;
-    hintEl.innerHTML =
-      "Play the scale, then press <kbd>SPACE</kbd> to reveal the notes.";
+    hintEl.innerHTML = HINT_DEFAULT;
 
     fetch("/api/round/")
       .then(function (resp) {

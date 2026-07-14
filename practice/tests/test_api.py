@@ -15,8 +15,8 @@ ROUND_KEYS = {"scale", "key", "direction", "form_id", "form_name",
 NOTE_KEYS = {"string", "fret", "pitch_class", "note_name", "is_root"}
 
 VALID_LOG_PAYLOAD = {
-    "form_id": "minor-pentatonic-e-shape",
-    "scale": "Minor Pentatonic",
+    "form_id": "major-scale-e-root-1st-finger-form",
+    "scale": "Major Scale",
     "key": "A",
     "direction": "Ascending",
     "correct": True,
@@ -270,8 +270,8 @@ class LogApiTests(TestCase):
         self.assertEqual(resp.json()["status"], "ok")
         self.assertEqual(AttemptLog.objects.count(), 1)
         row = AttemptLog.objects.get()
-        self.assertEqual(row.form_id, "minor-pentatonic-e-shape")
-        self.assertEqual(row.scale, "Minor Pentatonic")
+        self.assertEqual(row.form_id, "major-scale-e-root-1st-finger-form")
+        self.assertEqual(row.scale, "Major Scale")
         self.assertEqual(row.key, "A")
         self.assertEqual(row.direction, "Ascending")
         self.assertTrue(row.correct)
@@ -279,37 +279,29 @@ class LogApiTests(TestCase):
 
     def test_valid_log_correct_false(self):
         payload = {**VALID_LOG_PAYLOAD,
-                   "form_id": "major-pentatonic-e-shape",
-                   "scale": "Major Pentatonic",
+                   "form_id": "dominant7-arpeggio-e-root-1st-finger-form",
+                   "scale": "Dominant 7 Arpeggio",
                    "key": "F#",
                    "direction": "Descending",
                    "correct": False}
         resp = self.post_log(payload)
         self.assertEqual(resp.status_code, 201)
         row = AttemptLog.objects.get()
-        self.assertEqual(row.form_id, "major-pentatonic-e-shape")
-        self.assertEqual(row.scale, "Major Pentatonic")
+        self.assertEqual(row.form_id, "dominant7-arpeggio-e-root-1st-finger-form")
+        self.assertEqual(row.scale, "Dominant 7 Arpeggio")
         self.assertEqual(row.key, "F#")
         self.assertEqual(row.direction, "Descending")
         self.assertFalse(row.correct)
 
-    def test_new_v2_form_ids_and_scales_accepted(self):
-        """Arpeggio + scale-category rounds log fine (no membership check
-        on form_id, per the v1 decision; scale display names now include
-        the new families)."""
-        cases = [
-            {"form_id": "dominant7-arpeggio-a-shape",
-             "scale": "Dominant 7 Arpeggio"},
-            {"form_id": "natural-minor-scale-2nd-finger-form",
-             "scale": "Natural Minor Scale"},
-            {"form_id": "major7-arpeggio-g-shape",
-             "scale": "Major 7 Arpeggio"},
-        ]
-        for case in cases:
-            with self.subTest(**case):
-                resp = self.post_log({**VALID_LOG_PAYLOAD, **case})
+    def test_every_loaded_form_id_accepted(self):
+        """form_id is validated against the loaded fingering configs, so
+        every shipped form — whatever /api/round/ can serve — logs fine."""
+        form_ids = list(theory.load_fingerings())
+        for form_id in form_ids:
+            with self.subTest(form_id=form_id):
+                resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": form_id})
                 self.assertEqual(resp.status_code, 201)
-        self.assertEqual(AttemptLog.objects.count(), len(cases))
+        self.assertEqual(AttemptLog.objects.count(), len(form_ids))
 
     def test_every_flat_key_accepted(self):
         """The client echoes the served key back, so flat spellings
@@ -364,7 +356,7 @@ class LogApiTests(TestCase):
             "unknown direction": {**VALID_LOG_PAYLOAD, "direction": "Sideways"},
             "empty form_id": {**VALID_LOG_PAYLOAD, "form_id": ""},
             "form_id as int": {**VALID_LOG_PAYLOAD, "form_id": 7},
-            "form_id too long": {**VALID_LOG_PAYLOAD, "form_id": "x" * 65},
+            "unknown form_id": {**VALID_LOG_PAYLOAD, "form_id": "no-such-form"},
         }
         for label, payload in bad_payloads.items():
             with self.subTest(case=label):
@@ -372,20 +364,22 @@ class LogApiTests(TestCase):
                 self.assertEqual(resp.status_code, 400)
         self.assertEqual(AttemptLog.objects.count(), 0)
 
-    def test_form_id_too_long_400_with_field_error(self):
-        """65 chars exceeds the model's max_length=64 → per-field 400."""
+    def test_form_id_bound_mirrors_model_column(self):
+        """theory.FORM_ID_MAX_LENGTH (Django-free module) must match the
+        AttemptLog column it exists to protect."""
+        self.assertEqual(
+            AttemptLog._meta.get_field("form_id").max_length,
+            theory.FORM_ID_MAX_LENGTH,
+        )
+
+    def test_unknown_form_id_400_with_field_error(self):
+        """form_id must name a loaded fingering form → per-field 400.
+        This also bounds the stored value: every loadable id fits the
+        model's max_length=64 column."""
         resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": "x" * 65})
         self.assertEqual(resp.status_code, 400)
         self.assertIn("form_id", resp.json()["errors"])
         self.assertEqual(AttemptLog.objects.count(), 0)
-
-    def test_form_id_at_max_length_accepted(self):
-        """Exactly 64 chars fits the column; no membership check on
-        form_id, so any 64-char string logs fine."""
-        form_id = "x" * 64
-        resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": form_id})
-        self.assertEqual(resp.status_code, 201)
-        self.assertEqual(AttemptLog.objects.get().form_id, form_id)
 
     def test_log_rejects_get(self):
         resp = self.client.get("/api/log/")
