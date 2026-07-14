@@ -1,0 +1,17 @@
+# Hand-authored TAB written in the example key A (root = low E fret 5).
+# Box 1 of 5: the root-position box (Em-shape barre chord at fret 5).
+# The five CAGED boxes tile the neck: G (2-5), E (5-8), D (7-10),
+# C (9-13), A (12-15) — each anchored on the string carrying its root.
+id: minor-pentatonic-e-shape
+scale: minor_pentatonic  # scale id from ../scales.yaml
+name: "Minor Pentatonic — E Shape"
+caged_shape: E           # pentatonic category -> CAGED shape, not starting_finger
+anchor: root_low_e       # root on the low E string (fret 5 in A)
+example_key: A
+tab:
+  E: [5, 8]
+  A: [5, 7]
+  D: [5, 7]
+  G: [5, 7]
+  B: [5, 8]
+  e: [5, 8]

@@ -81,7 +81,12 @@ WINDOW_SIZE = 6
 # on. Each strategy maps a key to the fret of its root on that string;
 # everything downstream (offset resolution, window computation, rendering)
 # is strategy-agnostic.
-ANCHOR_ROOT_STRINGS = {"root_low_e": 6, "root_low_a": 5}
+ANCHOR_ROOT_STRINGS = {
+    "root_low_e": 6,
+    "root_low_a": 5,
+    "root_low_d": 4,  # D-shape CAGED boxes anchor on the D-string root
+    "root_low_g": 3,  # G-shape CAGED boxes anchor on the G-string root
+}
 ANCHOR_STRATEGIES = tuple(ANCHOR_ROOT_STRINGS)
 
 # All TABs are authored in this one key (root = low E fret 5). A single fixed
@@ -236,7 +241,6 @@ def root_fret_low_a(key: str) -> int:
 # TODO(anchor strategies): future anchor strategies are one new entry in
 # ANCHOR_ROOT_STRINGS (selected per-fingering via the `anchor` field of the
 # fingering config), e.g.:
-#   - roots on the D/G strings for the remaining CAGED boxes
 #   - 3-notes-per-string positions
 #   - fully randomised window positions
 # Each strategy maps (key) -> anchor fret; everything downstream (offset

@@ -27,17 +27,16 @@ starting_finger: 4                # int 1-4 — REQUIRED iff the scale's
                                   # pentatonic
 caged_shape: E                    # C|A|G|E|D — REQUIRED iff the category is
                                   # pentatonic; FORBIDDEN for scale/arpeggio
-anchor: root_low_e                # transposition strategy — root_low_e
-                                  # (root on the low E string) or root_low_a
-                                  # (root on the A string): in a round's key,
-                                  # the whole form shifts so the root lands
-                                  # on that key's root fret on the anchor
-                                  # string, then by whole octaves until its
-                                  # lowest fret is in [1, 12]
+anchor: root_low_e                # transposition strategy — the string the
+                                  # root anchors on: root_low_e, root_low_a,
+                                  # root_low_d or root_low_g. In a round's
+                                  # key, the whole form shifts so the root
+                                  # lands on that key's root fret on the
+                                  # anchor string, then by whole octaves
+                                  # until its lowest fret is in [1, 12]
 example_key: A                    # must be exactly A — every TAB is authored
-                                  # in the same fixed key (root = low E
-                                  # fret 5 for root_low_e, A string fret 12
-                                  # for root_low_a)
+                                  # in the same fixed key (root fret on the
+                                  # anchor string: E 5, A 12, D 7, G 2)
 tab:                              # the hand-authored TAB, low E to high e
   E: [5]
   A: [2, 4, 5]
@@ -66,7 +65,12 @@ root suffix is what tells the two same-finger variants apart in the UI.
 - Frets must be >= 1 — open strings don't transpose.
 - **Root on the anchor string** (all forms): the root must appear on the
   string named by `anchor` (in the key of A: fret 5 on `E` for root_low_e,
-  fret 12 on `A` for root_low_a) — that is what transposition anchors on.
+  fret 12 on `A` for root_low_a, fret 7 on `D` for root_low_d, fret 2 on
+  `G` for root_low_g) — that is what transposition anchors on. Each CAGED
+  pentatonic box anchors on the string carrying its root: E shape →
+  root_low_e, D shape → root_low_d, C and A shapes → root_low_a, G shape →
+  root_low_g (in A the boxes sit at G 2-5, E 5-8, D 7-10, C 9-13, A 12-15
+  for minor; G 2-5, E 4-7, D 6-10, C 9-12, A 11-14 for major).
 - **Start on the root** (scale/arpeggio finger forms only): no note may
   sound below the root. These forms are played from the low root up;
   conventionally you never play below it. Pentatonic CAGED boxes are

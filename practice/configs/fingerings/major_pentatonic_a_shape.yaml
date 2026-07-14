@@ -1,0 +1,16 @@
+# Hand-authored TAB written in the example key A (root = A string fret 12).
+# Box 4 of 5 (A-shape barre chord at fret 12; roots on the A string
+# fret 12 and G string fret 14).
+id: major-pentatonic-a-shape
+scale: major_pentatonic  # scale id from ../scales.yaml
+name: "Major Pentatonic — A Shape"
+caged_shape: A           # pentatonic category -> CAGED shape, not starting_finger
+anchor: root_low_a       # root on the A string (fret 12 in A)
+example_key: A
+tab:
+  E: [12, 14]
+  A: [12, 14]
+  D: [11, 14]
+  G: [11, 14]
+  B: [12, 14]
+  e: [12, 14]

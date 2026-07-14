@@ -1,0 +1,17 @@
+# Hand-authored TAB written in the example key A (root = G string fret 2).
+# Box 5 of 5 (Gm-shape chord; roots on the G string fret 2 and both E
+# strings fret 5). Sits one box below the root-position E shape and wraps
+# the CAGED cycle.
+id: minor-pentatonic-g-shape
+scale: minor_pentatonic  # scale id from ../scales.yaml
+name: "Minor Pentatonic — G Shape"
+caged_shape: G           # pentatonic category -> CAGED shape, not starting_finger
+anchor: root_low_g       # root on the G string (fret 2 in A)
+example_key: A
+tab:
+  E: [3, 5]
+  A: [3, 5]
+  D: [2, 5]
+  G: [2, 5]
+  B: [3, 5]
+  e: [3, 5]

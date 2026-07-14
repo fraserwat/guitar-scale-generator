@@ -22,6 +22,18 @@ EXPECTED_ROOT_FRETS_LOW_A = {
     "F#": 9, "G": 10, "G#": 11, "A": 12, "A#": 1, "B": 2,
 }
 
+# Expected root fret on the D string for every key (D maps to 12, not 0).
+EXPECTED_ROOT_FRETS_LOW_D = {
+    "C": 10, "C#": 11, "D": 12, "D#": 1, "E": 2, "F": 3,
+    "F#": 4, "G": 5, "G#": 6, "A": 7, "A#": 8, "B": 9,
+}
+
+# Expected root fret on the G string for every key (G maps to 12, not 0).
+EXPECTED_ROOT_FRETS_LOW_G = {
+    "C": 5, "C#": 6, "D": 7, "D#": 8, "E": 9, "F": 10,
+    "F#": 11, "G": 12, "G#": 1, "A": 2, "A#": 3, "B": 4,
+}
+
 # All 11 shipped scales: id -> (name, intervals, category).
 EXPECTED_SCALES = {
     "major_pentatonic": ("Major Pentatonic", [0, 2, 4, 7, 9], "pentatonic"),
@@ -280,6 +292,22 @@ class RootFretTests(SimpleTestCase):
             self.assertEqual(theory.anchor_fret(key, "root_low_a"),
                              theory.root_fret_low_a(key))
 
+    def test_anchor_fret_root_low_d_all_12_keys(self):
+        """Every key, including the D -> 12 (not 0) edge case (the D-shape
+        CAGED boxes anchor on the D string)."""
+        self.assertEqual(set(EXPECTED_ROOT_FRETS_LOW_D), set(theory.KEYS))
+        for key, fret in EXPECTED_ROOT_FRETS_LOW_D.items():
+            with self.subTest(key=key):
+                self.assertEqual(theory.anchor_fret(key, "root_low_d"), fret)
+
+    def test_anchor_fret_root_low_g_all_12_keys(self):
+        """Every key, including the G -> 12 (not 0) edge case (the G-shape
+        CAGED boxes anchor on the G string)."""
+        self.assertEqual(set(EXPECTED_ROOT_FRETS_LOW_G), set(theory.KEYS))
+        for key, fret in EXPECTED_ROOT_FRETS_LOW_G.items():
+            with self.subTest(key=key):
+                self.assertEqual(theory.anchor_fret(key, "root_low_g"), fret)
+
     def test_unknown_anchor_strategy_raises(self):
         with self.assertRaises(ValueError):
             theory.anchor_fret("A", "caged")
@@ -407,7 +435,7 @@ class ResolveFormExhaustiveTests(SimpleTestCase):
     def test_every_form_every_key(self):
         fingerings = theory.load_fingerings()
         scales = theory.load_scales()
-        self.assertEqual(len(fingerings), 16)
+        self.assertEqual(len(fingerings), 26)
         for form_id, form in fingerings.items():
             intervals = set(scales[form["scale"]]["intervals"])
             all_offsets = [o for offs in form["offsets"].values() for o in offs]
@@ -489,8 +517,9 @@ class OctaveNormalisationTests(SimpleTestCase):
     """The whole form shifts by octaves until its lowest fret is in [1, 12].
 
     Open strings (fret 0) are never allowed. (A downward shift can't occur
-    for valid forms any more: the authored TAB must contain the low-E root,
-    so the minimum offset is always <= 0 and anchor + min_offset <= 12.)
+    for valid forms: the authored TAB must contain the root on its anchor
+    string, so the minimum offset is always <= 0 and anchor + min_offset
+    <= 12.)
     """
 
     maxDiff = None
@@ -581,6 +610,32 @@ class HandVerifiedFixtureTests(SimpleTestCase):
             6: [5, 7], 5: [4, 5, 7], 4: [4, 6, 7],
             3: [4, 6, 7], 2: [5, 7], 1: [4, 5],
         })
+
+    def test_a_minor_pentatonic_e_shape_ground_truth(self):
+        """The classic minor pentatonic box 1 in A, frets per string:
+        E[5,8], A[5,7], D[5,7], G[5,7], B[5,8], e[5,8]."""
+        window_start, notes = theory.resolve_form(
+            "minor-pentatonic-e-shape", "A")
+        self.assertEqual(window_start, 5)
+        self.assertEqual(frets_by_string(notes), {
+            6: [5, 8], 5: [5, 7], 4: [5, 7],
+            3: [5, 7], 2: [5, 8], 1: [5, 8],
+        })
+        self.assertEqual({n["note_name"] for n in notes},
+                         {"A", "C", "D", "E", "G"})
+
+    def test_c_minor_pentatonic_g_shape_frets_per_string(self):
+        """The wrap-around box: G-shape anchored on the G-string root
+        (fret 5 in C), one box below C's root-position E shape."""
+        window_start, notes = theory.resolve_form(
+            "minor-pentatonic-g-shape", "C")
+        self.assertEqual(window_start, 5)
+        self.assertEqual(frets_by_string(notes), {
+            6: [6, 8], 5: [6, 8], 4: [5, 8],
+            3: [5, 8], 2: [6, 8], 1: [6, 8],
+        })
+        self.assertEqual({n["note_name"] for n in notes},
+                         {"C", "D#", "F", "G", "A#"})
 
     def test_c_major_2nd_finger_form_frets_per_string(self):
         """Transposition: same shape anchored at C (fret 8)."""

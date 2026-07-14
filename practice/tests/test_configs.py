@@ -73,10 +73,21 @@ VALID_ARPEGGIO_FORM = {
 }
 
 # Shipped configs: the E-string-root and A-string-root major-scale finger
-# forms plus the five seventh-chord arpeggios in 1st and 2nd finger forms
-# (hand-authored TABs derived from the same-finger major-scale forms).
-EXPECTED_FORM_COUNTS = {"scale": 6, "arpeggio": 10}
+# forms, the five seventh-chord arpeggios in 1st and 2nd finger forms
+# (hand-authored TABs derived from the same-finger major-scale forms), and
+# the five CAGED boxes of each pentatonic scale.
+EXPECTED_FORM_COUNTS = {"scale": 6, "arpeggio": 10, "pentatonic": 10}
 EXPECTED_FORM_IDS = {
+    "major-pentatonic-c-shape",
+    "major-pentatonic-a-shape",
+    "major-pentatonic-g-shape",
+    "major-pentatonic-e-shape",
+    "major-pentatonic-d-shape",
+    "minor-pentatonic-c-shape",
+    "minor-pentatonic-a-shape",
+    "minor-pentatonic-g-shape",
+    "minor-pentatonic-e-shape",
+    "minor-pentatonic-d-shape",
     "major-scale-e-root-1st-finger-form",
     "major-scale-e-root-2nd-finger-form",
     "major-scale-e-root-4th-finger-form",
@@ -111,13 +122,14 @@ def load_temp(*forms):
 
 
 class ShippedConfigTests(SimpleTestCase):
-    def test_16_configs_load_and_validate(self):
+    def test_26_configs_load_and_validate(self):
         fingerings = theory.load_fingerings()
-        self.assertEqual(len(fingerings), 16)
+        self.assertEqual(len(fingerings), 26)
 
     def test_count_by_category(self):
         """3 E-root + 3 A-root major-scale finger forms + 5 seventh-chord
-        arpeggios in 1st and 2nd finger forms."""
+        arpeggios in 1st and 2nd finger forms + 2 pentatonic scales x 5
+        CAGED boxes."""
         counts = {}
         for form in theory.load_fingerings().values():
             counts[form["category"]] = counts.get(form["category"], 0) + 1
@@ -184,7 +196,8 @@ class ShippedConfigTests(SimpleTestCase):
             self.assertEqual(set(form["tab"]), set(theory.TAB_STRINGS))
             self.assertEqual(set(form["offsets"]), {1, 2, 3, 4, 5, 6})
             self.assertIn(form["category"], theory.CATEGORIES)
-            root_label = {"root_low_e": "E", "root_low_a": "A"}[form["anchor"]]
+            root_label = {"root_low_e": "E", "root_low_a": "A",
+                          "root_low_d": "D", "root_low_g": "G"}[form["anchor"]]
             if form["category"] == "pentatonic":
                 self.assertIn(form["caged_shape"], theory.CAGED_SHAPES)
                 self.assertIsNone(form["starting_finger"])
@@ -230,6 +243,40 @@ class ShippedConfigTests(SimpleTestCase):
         self.assertEqual(
             fingerings["major-scale-a-root-4th-finger-form"]["display_label"],
             "4th Finger Form (A-root)")
+        self.assertEqual(
+            fingerings["minor-pentatonic-e-shape"]["display_label"],
+            "E Shape")
+        self.assertEqual(
+            fingerings["major-pentatonic-g-shape"]["display_label"],
+            "G Shape")
+
+    def test_each_pentatonic_scale_ships_all_five_caged_boxes(self):
+        by_scale = {}
+        for form in theory.load_fingerings().values():
+            if form["category"] == "pentatonic":
+                by_scale.setdefault(form["scale"], []).append(form)
+        self.assertEqual(
+            set(by_scale), {"major_pentatonic", "minor_pentatonic"})
+        for scale_id, forms in by_scale.items():
+            self.assertEqual(sorted(f["caged_shape"] for f in forms),
+                             sorted(theory.CAGED_SHAPES), scale_id)
+
+    # Each CAGED box anchors on the string carrying its root (the loader
+    # enforces that the root sits on the anchor string; this pins WHICH
+    # string that is for the shipped boxes).
+    EXPECTED_BOX_ANCHORS = {
+        "E": "root_low_e", "D": "root_low_d",
+        "C": "root_low_a", "A": "root_low_a", "G": "root_low_g",
+    }
+
+    def test_shipped_pentatonic_boxes_anchor_on_their_root_string(self):
+        for form in theory.load_fingerings().values():
+            if form["category"] != "pentatonic":
+                continue
+            with self.subTest(form=form["id"]):
+                self.assertEqual(
+                    form["anchor"],
+                    self.EXPECTED_BOX_ANCHORS[form["caged_shape"]])
 
     def test_shipped_a_root_forms_authored_at_the_12th_position(self):
         """The A-root TABs are authored with the root at A-string fret 12

@@ -132,10 +132,10 @@ class RoundApiTests(TestCase):
         self.assertEqual(resp["Content-Type"], "application/json")
         self.assert_valid_round(resp.json())
 
-    def test_round_randomisation_stays_in_domain_over_100_calls(self):
+    def test_round_randomisation_stays_in_domain_over_400_calls(self):
         seen = {"scales": set(), "directions": set(), "forms": set(),
                 "keys": set(), "categories": set()}
-        for _ in range(100):
+        for _ in range(400):
             resp = self.client.get("/api/round/")
             self.assertEqual(resp.status_code, 200)
             data = resp.json()
@@ -147,8 +147,10 @@ class RoundApiTests(TestCase):
             seen["categories"].add(data["category"])
 
         # Randomisation actually varies (P(failure) is astronomically small
-        # over 100 uniform draws from the 8 shipped forms).
-        self.assertEqual(seen["categories"], {"scale", "arpeggio"})
+        # over 400 uniform draws from the 26 shipped forms: each form is
+        # missed with p = (25/26)^400 ~ 1.5e-7).
+        self.assertEqual(seen["categories"],
+                         {"scale", "arpeggio", "pentatonic"})
         self.assertEqual(seen["directions"], {"Ascending", "Descending"})
         self.assertEqual(seen["forms"], set(theory.load_fingerings()))
         self.assertGreaterEqual(len(seen["keys"]), 5)
@@ -156,6 +158,7 @@ class RoundApiTests(TestCase):
             "Major Scale", "Major 7 Arpeggio", "Dominant 7 Arpeggio",
             "Minor 7 Arpeggio", "Minor 7b5 Arpeggio",
             "Diminished 7 Arpeggio",
+            "Major Pentatonic", "Minor Pentatonic",
         })
 
     def test_round_rejects_post(self):

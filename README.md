@@ -21,8 +21,8 @@ Wanting a more efficient way of keeping up with scales, not forgetting them, but
   - `id` — unique slug naming the root string (e.g. `major-scale-e-root-1st-finger-form` vs `major-scale-a-root-1st-finger-form`)
   - `scale` — an id from `practice/configs/scales.yaml`
   - `name` — display name
-  - `anchor` — `root_low_e` (root on the low E string) or `root_low_a` (root on the A string) — plus `example_key: A`
+  - `anchor` — the string the root anchors on: `root_low_e`, `root_low_a`, `root_low_d` or `root_low_g` — plus `example_key: A`
   - `tab` — string labels `E A D G B e` (low to high), each a list of frets; span ≤ 6 frets; frets ≥ 1
-  - plus `starting_finger` (1-4) for scale-category forms, or `caged_shape` (`C|A|G|E|D`) for pentatonic/arpeggio forms
-- Convention (validated as hard errors): the form **starts on the root** — the low-E root (fret 5 in A) must be present and nothing may sound below it. Every note must be in the scale and every scale interval must appear somewhere.
+  - plus `starting_finger` (1-4) for scale- and arpeggio-category forms (arpeggio forms are derived from the same-finger scale forms), or `caged_shape` (`C|A|G|E|D`) for pentatonic forms
+- Convention (validated as hard errors): the root must appear on the anchor string (fret 5 on low E in A for `root_low_e`, etc.). Scale/arpeggio finger forms **start on the root** — nothing may sound below it; pentatonic CAGED boxes are exempt (they span the whole position). Every note must be in the scale and every scale interval must appear somewhere.
 - The app auto-loads every yaml in that directory — no registration step. Loading is cached, so restart the server to pick up changes.
