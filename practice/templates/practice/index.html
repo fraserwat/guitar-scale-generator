@@ -1,0 +1,89 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guitar Scale Practice</title>
+  {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=3">
+</head>
+<body data-csrf-token="{{ csrf_token }}">
+  <main class="app">
+    <h1 class="app-title">Guitar Scale Practice</h1>
+
+    <!-- ============ Start screen ============ -->
+    <section id="start-screen" class="screen">
+      <div class="panel">
+        <label class="field">
+          <span class="field-label">Timer length</span>
+          <select id="timer-length">
+            <option value="1">1 minute</option>
+            <option value="2">2 minutes</option>
+            <option value="5" selected>5 minutes</option>
+            <option value="10">10 minutes</option>
+          </select>
+        </label>
+
+        <!-- TODO(7-string): enable this toggle and add 7-string tuning
+             (low B) support in theory.py + the SVG renderer. -->
+        <label class="field field-disabled" title="Coming soon">
+          <span class="field-label">7-String <span class="badge">coming soon</span></span>
+          <input type="checkbox" id="seven-string-toggle" disabled>
+        </label>
+
+        <button id="start-btn" class="btn btn-primary">Start</button>
+      </div>
+
+      <p class="keyboard-tip">Tip: during a round, press <kbd>SPACE</kbd> to reveal,
+        then <kbd>,</kbd> for correct &middot; <kbd>.</kbd> for incorrect</p>
+    </section>
+
+    <!-- ============ Exercise screen ============ -->
+    <section id="exercise-screen" class="screen hidden">
+      <div class="exercise-top">
+        <div id="timer" class="timer">5:00</div>
+        <div class="round-header">
+          <!-- e.g. "C Major Pentatonic — E Shape · Descending"
+                or  "A Natural Minor Scale — 2nd Finger Form · Ascending" -->
+          <div>
+            <span id="round-key" class="round-key">–</span>
+            <span id="round-scale" class="round-scale">–</span>
+          </div>
+          <div class="round-form">
+            <span id="round-label" class="round-label">–</span>
+            <span class="round-sep">·</span>
+            <span id="round-direction" class="round-direction">–</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Root notes are filled orange, plain scale notes outlined — no
+           legend needed; that convention is intuitive to guitarists. -->
+      <svg id="neck" class="neck" viewBox="0 0 560 240" role="img"
+           aria-label="Guitar neck diagram"></svg>
+
+      <!-- TODO(tab): render actual TAB numbers for the scale run here.
+           For now this is an empty visual stub. -->
+      <svg id="tab-stub" class="tab-stub" viewBox="0 0 560 130" role="img"
+           aria-label="Empty tablature staff"></svg>
+
+      <p id="hint" class="hint">Play the scale, then press <kbd>SPACE</kbd> to reveal the notes.</p>
+
+      <div class="judge-buttons">
+        <button id="correct-btn" class="btn btn-correct" disabled>&#10003; Correct</button>
+        <button id="incorrect-btn" class="btn btn-incorrect" disabled>&#10007; Incorrect</button>
+      </div>
+    </section>
+
+    <!-- ============ Results screen ============ -->
+    <section id="results-screen" class="screen hidden">
+      <h2>Session results</h2>
+      <p id="results-totals" class="results-totals"></p>
+      <ul id="results-list" class="results-list"></ul>
+      <button id="again-btn" class="btn btn-primary">Practice again</button>
+    </section>
+  </main>
+
+  <script src="{% static 'practice/app.js' %}?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+/* Guitar Scale Practice — dark theme (high-contrast: text/controls aim for
+   WCAG AA against the background). */
+
+:root {
+  --bg: #0c0f14;       /* darker background... */
+  --panel: #161b23;
+  --line: #4b5568;     /* stronger panel/fret lines */
+  --text: #f4f7fb;     /* ...brighter text */
+  --muted: #aab5c5;    /* muted text still ~8:1 on --bg */
+  --accent: #f59f3d;   /* root notes */
+  --note: #eef2f8;     /* plain scale notes */
+  --green: #4ed184;
+  --red: #ff7a75;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.4;
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+.app-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+}
+
+.hidden { display: none !important; }
+
+/* ---- Start screen ---- */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  max-width: 360px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;  /* left-align controls (e.g. the 7-string box) */
+  gap: 0.5rem;
+}
+
+.field > select { align-self: stretch; }
+
+.field-label { font-size: 0.9rem; color: var(--muted); }
+
+.field-disabled { opacity: 0.6; cursor: not-allowed; }
+
+.badge {
+  font-size: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  margin-left: 0.4rem;
+}
+
+select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 1rem;
+}
+
+.btn {
+  font-size: 1rem;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #120b02; font-weight: 700; }
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-correct:not(:disabled) { border: 2px solid var(--green); color: var(--green); font-weight: 600; }
+.btn-incorrect:not(:disabled) { border: 2px solid var(--red); color: var(--red); font-weight: 600; }
+.btn-correct:not(:disabled):hover { background: rgba(78, 209, 132, 0.2); }
+.btn-incorrect:not(:disabled):hover { background: rgba(255, 122, 117, 0.2); }
+
+/* ---- Exercise screen ---- */
+.exercise-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.timer {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.round-header { font-size: 1.3rem; text-align: right; }
+.round-form { font-size: 0.95rem; color: var(--muted); }
+.round-key { font-weight: 700; color: var(--accent); }
+.round-scale { font-weight: 600; }
+.round-label { color: var(--text); }
+.round-sep { margin: 0 0.15rem; }
+.round-direction { color: var(--muted); font-style: italic; }
+
+.neck, .tab-stub {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+}
+
+.hint { color: var(--muted); font-size: 0.95rem; margin: 1.25rem 0; }
+kbd {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.05rem 0.45rem;
+  font-family: inherit;
+  color: var(--text);
+}
+
+.judge-buttons { display: flex; gap: 1.25rem; margin-top: 1.25rem; }
+
+/* Understated keyboard-shorthand tip on the start menu (kept off the
+   game-loop UI). */
+.keyboard-tip {
+  margin-top: 1.5rem;
+  max-width: 360px;   /* aligns under the start panel */
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.keyboard-tip kbd { font-size: 0.8rem; }
+
+/* ---- Results screen ---- */
+.results-totals { font-size: 1.1rem; }
+
+.results-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.results-list li {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.results-list li.result-correct { border-left: 4px solid var(--green); }
+.results-list li.result-incorrect { border-left: 4px solid var(--red); }
+.result-mark-correct { color: var(--green); }
+.result-mark-incorrect { color: var(--red); }

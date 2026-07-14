@@ -1,0 +1,46 @@
+# Scale definitions: scale id -> display name + intervals (semitones from
+# root) + category.
+#
+# category drives the fingering-form label language:
+#   pentatonic | arpeggio -> CAGED shapes  ("E Shape"), `caged_shape` required
+#   scale                 -> finger forms  ("2nd Finger Form"),
+#                            `starting_finger` required
+#
+# Adding a new scale is just a new entry here (plus fingering configs that
+# reference it in configs/fingerings/).
+major_pentatonic:
+  name: "Major Pentatonic"
+  intervals: [0, 2, 4, 7, 9]
+  category: pentatonic
+minor_pentatonic:
+  name: "Minor Pentatonic"
+  intervals: [0, 3, 5, 7, 10]
+  category: pentatonic
+major_arpeggio:
+  name: "Major Arpeggio"
+  intervals: [0, 4, 7]
+  category: arpeggio
+minor_arpeggio:
+  name: "Minor Arpeggio"
+  intervals: [0, 3, 7]
+  category: arpeggio
+major7_arpeggio:
+  name: "Major 7 Arpeggio"
+  intervals: [0, 4, 7, 11]
+  category: arpeggio
+minor7_arpeggio:
+  name: "Minor 7 Arpeggio"
+  intervals: [0, 3, 7, 10]
+  category: arpeggio
+dominant7_arpeggio:
+  name: "Dominant 7 Arpeggio"
+  intervals: [0, 4, 7, 10]
+  category: arpeggio
+major_scale:
+  name: "Major Scale"
+  intervals: [0, 2, 4, 5, 7, 9, 11]
+  category: scale
+natural_minor_scale:
+  name: "Natural Minor Scale"
+  intervals: [0, 2, 3, 5, 7, 8, 10]
+  category: scale
