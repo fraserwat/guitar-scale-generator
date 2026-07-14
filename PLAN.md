@@ -1,4 +1,4 @@
-# Guitar Scale Practice App — v2 Build Plan
+# ScaleRunner (guitar scale practice app) — v2 Build Plan
 
 Status legend: `[ ]` pending · `[~]` in progress · `[x]` done · `[!]` blocked/issue.
 (v1 shipped 2026-07-13: config-driven pentatonic forms, exhaustive 50-test suite, verified. This plan replaces the v1 doc.)
@@ -119,6 +119,38 @@ TODO anticipated.
       below-A-string-root; pentatonic below-root carve-out (loads fine).
       `resolve_form` needed zero changes — offsets were already
       strategy-agnostic.
+
+## Pentatonic CAGED boxes (2026-07-14, parallel background agent)
+
+All 5 CAGED boxes for both pentatonic scales, hand-authored TABs in A,
+labelled by shape ("E Shape" … "D Shape"):
+`{major,minor}_pentatonic_{e,d,c,a,g}_shape.yaml`. 26 forms total
+(6 scale + 10 arpeggio + 10 pentatonic).
+
+- [x] Each box anchors on the string carrying its root, per the A-root
+      round's design: E shape → `root_low_e`, D → `root_low_d`, C and A →
+      `root_low_a`, G → `root_low_g`. The two new strategies are one
+      `ANCHOR_ROOT_STRINGS` entry each — the only theory.py change; the
+      validation split from the A-root round needed nothing further.
+- [x] Boxes authored in position in A (minor: G 2-5, E 5-8, D 7-10,
+      C 9-13, A 12-15; major: G 2-5, E 4-7, D 6-10, C 9-12, A 11-14) —
+      all inside the display octave, so the TAB round-trip stays verbatim
+      and no octave down-shift is ever needed.
+- [x] Tests: 142 (was 136) — anchor_fret for D/G strings all 12 keys
+      (D→12, G→12 edge cases); every pentatonic scale ships all 5 shapes;
+      shipped boxes anchor on their root string; box-1 ground truth in A;
+      wrap-around G-shape fixture in C. Randomisation test bumped
+      100 → 400 draws (26 forms would flake ~40% at 100).
+- [x] No view/JS changes — labels and round payloads already config-driven.
+
+## Rename + title home link (2026-07-14)
+
+- [x] App renamed "Guitar Scale Practice" → **ScaleRunner** everywhere but
+      the repo name (page title, h1, JS/CSS/theory headers, docs).
+- [x] The title h1 is now a home link: clicking it from any screen stops
+      the timer, discards the session (no results), and shows the start
+      menu. Pointer cursor + hover brighten signal the affordance.
+      Cache-bust bumps: style.css v7, app.js v6.
 
 ## Deferred (unchanged)
 - 7-string · Users/auth · Spaced repetition algorithm · Flat/sharp spelling · Config hot-reload
