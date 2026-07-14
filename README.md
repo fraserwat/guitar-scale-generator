@@ -8,6 +8,7 @@ Wanting a more efficient way of keeping up with scales, not forgetting them, but
 - [x] Reset DJANGO_SECRET_JEY in .env.
 - [x] Separate correct & incorrect in results (incorrect first).
 - [x] Flat/sharp spelling.
+- [ ] Descending / Ascending in Orange pop to make it easier to see.
 - [ ] Select scale types from practice menu.
 - [ ] Repeat in Queue+3 if incorrect.
 - [ ] 7-string scale forms.
