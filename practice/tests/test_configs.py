@@ -46,7 +46,15 @@ VALID_ARPEGGIO_FORM = {
     },
 }
 
-EXPECTED_FORM_COUNTS = {"pentatonic": 10, "arpeggio": 25, "scale": 6}
+# Shipped configs are pruned to the 3 E-root major-scale finger forms while
+# they are manually validated; pentatonic/arpeggio/natural-minor forms can be
+# regenerated with scripts/generate_fingerings.py (which restores all 41).
+EXPECTED_FORM_COUNTS = {"scale": 3}
+EXPECTED_FORM_IDS = {
+    "major-scale-1st-finger-form",
+    "major-scale-2nd-finger-form",
+    "major-scale-4th-finger-form",
+}
 
 
 def write_forms(dirname, *forms):
@@ -64,28 +72,19 @@ def load_temp(*forms):
 
 
 class ShippedConfigTests(SimpleTestCase):
-    def test_41_configs_load_and_validate(self):
+    def test_3_configs_load_and_validate(self):
         fingerings = theory.load_fingerings()
-        self.assertEqual(len(fingerings), 41)
+        self.assertEqual(len(fingerings), 3)
 
     def test_count_by_category(self):
-        """10 pentatonic + 25 arpeggio + 6 scale forms = 41."""
+        """Only the 3 major-scale finger forms ship."""
         counts = {}
         for form in theory.load_fingerings().values():
             counts[form["category"]] = counts.get(form["category"], 0) + 1
         self.assertEqual(counts, EXPECTED_FORM_COUNTS)
 
     def test_exact_id_set(self):
-        shapes = ("c", "a", "g", "e", "d")
-        expected = set()
-        for scale in ("major-pentatonic", "minor-pentatonic",
-                      "major-arpeggio", "minor-arpeggio", "major7-arpeggio",
-                      "minor7-arpeggio", "dominant7-arpeggio"):
-            expected |= {f"{scale}-{s}-shape" for s in shapes}
-        for scale in ("major-scale", "natural-minor-scale"):
-            expected |= {f"{scale}-{f}-finger-form"
-                         for f in ("1st", "2nd", "4th")}
-        self.assertEqual(set(theory.load_fingerings()), expected)
+        self.assertEqual(set(theory.load_fingerings()), EXPECTED_FORM_IDS)
 
     def test_shipped_forms_reference_known_scales(self):
         scales = theory.load_scales()
@@ -130,29 +129,14 @@ class ShippedConfigTests(SimpleTestCase):
     def test_display_labels_literal_examples(self):
         fingerings = theory.load_fingerings()
         self.assertEqual(
-            fingerings["minor-pentatonic-e-shape"]["display_label"], "E Shape")
-        self.assertEqual(
-            fingerings["dominant7-arpeggio-a-shape"]["display_label"],
-            "A Shape")
-        self.assertEqual(
             fingerings["major-scale-1st-finger-form"]["display_label"],
             "1st Finger Form")
         self.assertEqual(
             fingerings["major-scale-2nd-finger-form"]["display_label"],
             "2nd Finger Form")
         self.assertEqual(
-            fingerings["natural-minor-scale-4th-finger-form"]["display_label"],
+            fingerings["major-scale-4th-finger-form"]["display_label"],
             "4th Finger Form")
-
-    def test_arpeggio_forms_have_single_note_strings(self):
-        """The 1..n-notes-per-string relaxation is actually exercised."""
-        one_note_strings = [
-            form["id"]
-            for form in theory.load_fingerings().values()
-            if form["category"] == "arpeggio"
-            and any(len(offs) == 1 for offs in form["offsets"].values())
-        ]
-        self.assertGreater(len(one_note_strings), 0)
 
 
 class ValidTempConfigTests(SimpleTestCase):

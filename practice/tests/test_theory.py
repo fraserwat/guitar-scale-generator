@@ -1,8 +1,41 @@
-"""Exhaustive tests for the music theory engine (practice/theory.py)."""
+"""Exhaustive tests for the music theory engine (practice/theory.py).
+
+The shipped configs are pruned to the 3 E-root major-scale forms, but the
+engine must stay viable for all 41 generated forms. Tests that exercise
+pentatonic/arpeggio/natural-minor forms therefore run against a temp dir
+populated by scripts/generate_fingerings.py (never against the live
+configs dir, which the generator would delete-and-rewrite).
+"""
+
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 
 from django.test import SimpleTestCase
 
 from practice import theory
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+GENERATOR = REPO_ROOT / "scripts" / "generate_fingerings.py"
+
+# Module-level temp dir holding all 41 generator-produced forms.
+_generated_tmp = None
+GENERATED_DIR = None
+
+
+def setUpModule():
+    global _generated_tmp, GENERATED_DIR
+    _generated_tmp = tempfile.TemporaryDirectory()
+    GENERATED_DIR = Path(_generated_tmp.name)
+    subprocess.run(
+        [sys.executable, str(GENERATOR), "-o", str(GENERATED_DIR)],
+        check=True, capture_output=True, text=True, cwd=REPO_ROOT,
+    )
+
+
+def tearDownModule():
+    _generated_tmp.cleanup()
 
 
 # Expected root fret on the low E string for every key (E maps to 12, not 0).
@@ -136,12 +169,16 @@ class ScaleIntervalTests(SimpleTestCase):
 
 
 class ResolveFormExhaustiveTests(SimpleTestCase):
-    """Every shipped form x all 12 keys, every note verified independently."""
+    """Every generated form x all 12 keys, every note verified
+    independently. Covers the 3 shipped forms too (byte-identical copies
+    are in the generated set) plus the 38 pruned-but-still-viable forms."""
 
     def test_every_form_every_key(self):
-        fingerings = theory.load_fingerings()
+        fingerings = theory.load_fingerings(GENERATED_DIR)
         scales = theory.load_scales()
         self.assertEqual(len(fingerings), 41)
+        # The pruned shipped set is a strict subset of the generated set.
+        self.assertLess(set(theory.load_fingerings()), set(fingerings))
         for form_id, form in fingerings.items():
             intervals = set(scales[form["scale"]]["intervals"])
             all_offsets = [o for offs in form["offsets"].values() for o in offs]
@@ -150,7 +187,8 @@ class ResolveFormExhaustiveTests(SimpleTestCase):
                 with self.subTest(form=form_id, key=key):
                     root_pc = theory.key_to_pc(key)
                     anchor = normalised_anchor(key, form)
-                    window_start, notes = theory.resolve_form(form_id, key)
+                    window_start, notes = theory.resolve_form(
+                        form_id, key, GENERATED_DIR)
 
                     # Window position and width; octave normalisation:
                     # the lowest fret of every form in every key is in
@@ -209,7 +247,8 @@ class ResolveFormExhaustiveTests(SimpleTestCase):
                                     "every form must contain the root")
 
     def test_notes_ordered_low_string_first(self):
-        _, notes = theory.resolve_form("minor-pentatonic-e-shape", "A")
+        _, notes = theory.resolve_form(
+            "minor-pentatonic-e-shape", "A", GENERATED_DIR)
         order = [(n["string"], n["fret"]) for n in notes]
         self.assertEqual(
             order, sorted(order, key=lambda sf: (-sf[0], sf[1])))
@@ -228,7 +267,7 @@ class OctaveNormalisationTests(SimpleTestCase):
         # F anchors at fret 1; min offset -1 gives raw min fret 0, so the
         # whole form shifts UP an octave: frets 12-15.
         window_start, notes = theory.resolve_form(
-            "major-pentatonic-e-shape", "F")
+            "major-pentatonic-e-shape", "F", GENERATED_DIR)
         self.assertEqual(window_start, 12)
         self.assertEqual(frets_by_string(notes), {
             6: [13, 15], 5: [12, 15], 4: [12, 15],
@@ -240,7 +279,7 @@ class OctaveNormalisationTests(SimpleTestCase):
         # 2:[10,12] 1:[10,12]; A anchors at fret 5, raw min fret 14, so the
         # whole form shifts DOWN an octave to frets 2-5.
         window_start, notes = theory.resolve_form(
-            "minor-pentatonic-g-shape", "A")
+            "minor-pentatonic-g-shape", "A", GENERATED_DIR)
         self.assertEqual(window_start, 2)
         self.assertEqual(frets_by_string(notes), {
             6: [3, 5], 5: [3, 5], 4: [2, 5],
@@ -252,7 +291,7 @@ class OctaveNormalisationTests(SimpleTestCase):
         # normalised down to 5-8 (the same physical box as A minor pent E
         # shape — C major is A minor's relative major).
         window_start, notes = theory.resolve_form(
-            "major-pentatonic-g-shape", "C")
+            "major-pentatonic-g-shape", "C", GENERATED_DIR)
         self.assertEqual(window_start, 5)
         self.assertEqual(frets_by_string(notes), {
             6: [5, 8], 5: [5, 7], 4: [5, 7],
@@ -261,14 +300,16 @@ class OctaveNormalisationTests(SimpleTestCase):
 
     def test_no_shift_when_min_fret_already_in_range(self):
         # F minor pent E shape: anchor 1, min offset 0 -> stays at fret 1.
-        window_start, _ = theory.resolve_form("minor-pentatonic-e-shape", "F")
+        window_start, _ = theory.resolve_form(
+            "minor-pentatonic-e-shape", "F", GENERATED_DIR)
         self.assertEqual(window_start, 1)
 
     def test_min_fret_in_1_to_12_for_every_form_and_key(self):
-        for form_id in theory.load_fingerings():
+        for form_id in theory.load_fingerings(GENERATED_DIR):
             for key in theory.KEYS:
                 with self.subTest(form=form_id, key=key):
-                    window_start, notes = theory.resolve_form(form_id, key)
+                    window_start, notes = theory.resolve_form(
+                        form_id, key, GENERATED_DIR)
                     min_fret = min(n["fret"] for n in notes)
                     self.assertEqual(window_start, min_fret)
                     self.assertGreaterEqual(min_fret, 1)
@@ -285,7 +326,7 @@ class HandVerifiedFixtureTests(SimpleTestCase):
         # Classic box: 5-8 / 5-7 / 5-7 / 5-7 / 5-8 / 5-8, roots at
         # string 6 fret 5, string 4 fret 7, string 1 fret 5.
         window_start, notes = theory.resolve_form(
-            "minor-pentatonic-e-shape", "A")
+            "minor-pentatonic-e-shape", "A", GENERATED_DIR)
         self.assertEqual(window_start, 5)
         expected = [
             {"string": 6, "fret": 5, "pitch_class": 9, "note_name": "A", "is_root": True},
@@ -305,7 +346,8 @@ class HandVerifiedFixtureTests(SimpleTestCase):
 
     def test_a_minor_pentatonic_e_shape_frets_per_string(self):
         """The exact per-string fret sets required by the spec."""
-        _, notes = theory.resolve_form("minor-pentatonic-e-shape", "A")
+        _, notes = theory.resolve_form(
+            "minor-pentatonic-e-shape", "A", GENERATED_DIR)
         self.assertEqual(frets_by_string(notes), {
             6: [5, 8], 5: [5, 7], 4: [5, 7],
             3: [5, 7], 2: [5, 8], 1: [5, 8],
@@ -313,7 +355,8 @@ class HandVerifiedFixtureTests(SimpleTestCase):
 
     def test_c_major_arpeggio_e_shape_frets_per_string(self):
         """C major arpeggio E shape: anchor 8, spec-required fret table."""
-        window_start, notes = theory.resolve_form("major-arpeggio-e-shape", "C")
+        window_start, notes = theory.resolve_form(
+            "major-arpeggio-e-shape", "C", GENERATED_DIR)
         self.assertEqual(window_start, 7)
         self.assertEqual(frets_by_string(notes), {
             6: [8], 5: [7, 10], 4: [10], 3: [9], 2: [8], 1: [8],
@@ -338,7 +381,7 @@ class HandVerifiedFixtureTests(SimpleTestCase):
         # C major pentatonic = C D E G A (pcs 0, 2, 4, 7, 9). Anchor fret 8;
         # min offset -1 so the window starts at 7.
         window_start, notes = theory.resolve_form(
-            "major-pentatonic-e-shape", "C")
+            "major-pentatonic-e-shape", "C", GENERATED_DIR)
         self.assertEqual(window_start, 7)
         expected = [
             {"string": 6, "fret": 8, "pitch_class": 0, "note_name": "C", "is_root": True},
@@ -359,7 +402,7 @@ class HandVerifiedFixtureTests(SimpleTestCase):
     def test_e_key_minor_pent_e_shape_at_fret_12(self):
         """Key E: min fret normalises to 12 (never 0 / open strings)."""
         window_start, notes = theory.resolve_form(
-            "minor-pentatonic-e-shape", "E")
+            "minor-pentatonic-e-shape", "E", GENERATED_DIR)
         self.assertEqual(window_start, 12)
         self.assertEqual(
             {n["fret"] for n in notes if n["string"] == 6}, {12, 15})
@@ -372,4 +415,4 @@ class ResolveFormErrorTests(SimpleTestCase):
 
     def test_unknown_key_raises(self):
         with self.assertRaises(ValueError):
-            theory.resolve_form("minor-pentatonic-e-shape", "H")
+            theory.resolve_form("major-scale-1st-finger-form", "H")

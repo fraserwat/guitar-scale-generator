@@ -1,7 +1,13 @@
 """Tests for scripts/generate_fingerings.py and the generated configs.
 
+The generator always runs against a temp directory here — NEVER against
+practice/configs/fingerings/. The shipped dir is pruned to the 3 E-root
+major-scale forms, and the generator's main() deletes-and-rewrites its
+whole output dir, so pointing it at the live dir would resurrect the 38
+pruned files.
+
 The known-good offset tables below are asserted LITERALLY against the
-shipped YAML files (loaded through the engine), independently of the
+generator's output (loaded through the engine), independently of the
 generator's own logic.
 """
 
@@ -18,6 +24,29 @@ from practice import theory
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 GENERATOR = REPO_ROOT / "scripts" / "generate_fingerings.py"
 FINGERINGS_DIR = REPO_ROOT / "practice" / "configs" / "fingerings"
+
+# The pruned subset that actually ships in the repo.
+SHIPPED_FILES = [
+    "major_scale_1st_finger_form.yaml",
+    "major_scale_2nd_finger_form.yaml",
+    "major_scale_4th_finger_form.yaml",
+]
+
+# Module-level temp dir holding one generator run, shared by the tests
+# below (the determinism test does its own fresh runs).
+_generated_tmp = None
+GENERATED_DIR = None
+
+
+def setUpModule():
+    global _generated_tmp, GENERATED_DIR
+    _generated_tmp = tempfile.TemporaryDirectory()
+    GENERATED_DIR = Path(_generated_tmp.name)
+    run_generator(GENERATED_DIR)
+
+
+def tearDownModule():
+    _generated_tmp.cleanup()
 
 # Phase-0 hand-verified tables (offsets per string, low E = 6 first).
 KNOWN_GOOD_OFFSETS = {
@@ -61,37 +90,47 @@ class GeneratorDeterminismTests(SimpleTestCase):
             self.assertEqual(mismatch, [])
             self.assertEqual(errors, [])
 
-    def test_shipped_configs_match_generator_output(self):
-        """The repo's fingerings dir is exactly what the generator emits."""
-        with tempfile.TemporaryDirectory() as tmp:
-            run_generator(tmp)
-            generated = sorted(p.name for p in Path(tmp).glob("*.yaml"))
-            shipped = sorted(p.name for p in FINGERINGS_DIR.glob("*.yaml"))
-            self.assertEqual(generated, shipped)
-            match, mismatch, errors = filecmp.cmpfiles(
-                tmp, FINGERINGS_DIR, generated, shallow=False)
-            self.assertEqual(mismatch, [])
-            self.assertEqual(errors, [])
-
     def test_generates_exactly_41_files(self):
-        self.assertEqual(len(list(FINGERINGS_DIR.glob("*.yaml"))), 41)
-        self.assertEqual(len(list(FINGERINGS_DIR.glob("*.yml"))), 0)
+        self.assertEqual(len(list(GENERATED_DIR.glob("*.yaml"))), 41)
+        self.assertEqual(len(list(GENERATED_DIR.glob("*.yml"))), 0)
+
+
+class ShippedSubsetTests(SimpleTestCase):
+    """The pruned shipped dir stays an exact, in-sync generator subset."""
+
+    def test_shipped_dir_contains_exactly_the_3_major_scale_forms(self):
+        shipped = sorted(
+            p.name
+            for pattern in ("*.yaml", "*.yml")
+            for p in FINGERINGS_DIR.glob(pattern)
+        )
+        self.assertEqual(shipped, SHIPPED_FILES)
+
+    def test_shipped_configs_byte_identical_to_generator_output(self):
+        """Each shipped yaml == the same-named file the generator emits."""
+        generated_names = {p.name for p in GENERATED_DIR.glob("*.yaml")}
+        self.assertTrue(set(SHIPPED_FILES) <= generated_names)
+        match, mismatch, errors = filecmp.cmpfiles(
+            GENERATED_DIR, FINGERINGS_DIR, SHIPPED_FILES, shallow=False)
+        self.assertEqual(sorted(match), SHIPPED_FILES)
+        self.assertEqual(mismatch, [])
+        self.assertEqual(errors, [])
 
 
 class KnownGoodTableTests(SimpleTestCase):
-    """The 5 hand-verified offset tables, asserted against shipped YAMLs."""
+    """The 5 hand-verified offset tables, asserted against generated YAMLs."""
 
     maxDiff = None
 
     def test_known_good_tables_literal(self):
-        fingerings = theory.load_fingerings()
+        fingerings = theory.load_fingerings(GENERATED_DIR)
         for form_id, offsets in KNOWN_GOOD_OFFSETS.items():
             with self.subTest(form=form_id):
                 self.assertEqual(fingerings[form_id]["offsets"], offsets)
 
     def test_v1_forms_reproduced_under_caged_names(self):
         """v1 Form 1/Form 2 = the E and D shapes, byte-for-byte offsets."""
-        fingerings = theory.load_fingerings()
+        fingerings = theory.load_fingerings(GENERATED_DIR)
         self.assertEqual(
             fingerings["minor-pentatonic-e-shape"]["offsets"],
             {6: [0, 3], 5: [0, 2], 4: [0, 2], 3: [0, 2], 2: [0, 3], 1: [0, 3]})
@@ -106,7 +145,7 @@ class KnownGoodTableTests(SimpleTestCase):
     def test_pentatonic_boxes_tile_the_octave(self):
         """Consecutive boxes share their boundary note on every string, and
         the 5 boxes cover the string's full cyclic note sequence."""
-        fingerings = theory.load_fingerings()
+        fingerings = theory.load_fingerings(GENERATED_DIR)
         for scale in ("major-pentatonic", "minor-pentatonic"):
             shapes = ["e", "d", "c", "a", "g"]  # ascending box order
             forms = [fingerings[f"{scale}-{s}-shape"] for s in shapes]
@@ -122,7 +161,7 @@ class KnownGoodTableTests(SimpleTestCase):
 
     def test_arpeggio_offsets_subset_of_matching_pentatonic_window(self):
         """Arpeggio shape X sits inside pentatonic shape X's box window."""
-        fingerings = theory.load_fingerings()
+        fingerings = theory.load_fingerings(GENERATED_DIR)
         parents = {
             "major-arpeggio": "major-pentatonic",
             "major7-arpeggio": "major-pentatonic",
@@ -144,7 +183,7 @@ class KnownGoodTableTests(SimpleTestCase):
 
     def test_no_scale_form_needed_widening(self):
         """All 6 finger forms are complete within their 4-fret windows."""
-        fingerings = theory.load_fingerings()
+        fingerings = theory.load_fingerings(GENERATED_DIR)
         for form in fingerings.values():
             if form["category"] != "scale":
                 continue
