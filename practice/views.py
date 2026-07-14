@@ -35,6 +35,11 @@ def api_round(request):
     weights = spaced_repetition.next_round_weights(form_ids)
     form_id = random.choices(form_ids, weights=weights, k=1)[0]
     key = random.choice(theory.KEYS)
+    # Accidental (black-key) roots: 50% chance to present the flat enharmonic
+    # spelling instead (e.g. Gb rather than F#). Natural keys are unchanged —
+    # random.random() isn't even drawn for them.
+    if key in theory.SHARP_TO_FLAT and random.random() < 0.5:
+        key = theory.SHARP_TO_FLAT[key]
     direction = random.choice(theory.DIRECTIONS)
 
     form = fingerings[form_id]
@@ -47,7 +52,8 @@ def api_round(request):
         "form_name": form["name"],
         "category": form["category"],
         "display_label": form["display_label"],
-        "caged_shape": form["caged_shape"],          # str, or None for scales
+        "caged_shape": form["caged_shape"],          # str, or None for
+                                                     # scale/arpeggio forms
         "starting_finger": form["starting_finger"],  # int, or None for CAGED
         "window_start": window_start,
         "notes": notes,
@@ -85,8 +91,8 @@ def api_log(request):
         )
     if not isinstance(scale, str) or scale not in valid_scales:
         errors["scale"] = f"Required; must be one of {valid_scales}."
-    if not isinstance(key, str) or key not in theory.KEYS:
-        errors["key"] = f"Required; must be one of {theory.KEYS}."
+    if not isinstance(key, str) or key not in theory.VALID_KEYS:
+        errors["key"] = f"Required; must be one of {theory.VALID_KEYS}."
     if not isinstance(direction, str) or direction not in theory.DIRECTIONS:
         errors["direction"] = f"Required; must be one of {theory.DIRECTIONS}."
     if not isinstance(correct, bool):

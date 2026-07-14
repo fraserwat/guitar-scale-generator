@@ -1,0 +1,15 @@
+# Hand-authored TAB written in the example key A (root = A string fret 12).
+# Convention: the form starts on the root — nothing below the low root is played.
+id: major-scale-a-root-2nd-finger-form
+scale: major_scale
+name: "Major Scale — 2nd Finger Form (A-root)"
+starting_finger: 2
+anchor: root_low_a
+example_key: A
+tab:
+  E: []
+  A: [12, 14]
+  D: [11, 12, 14]
+  G: [11, 13, 14]
+  B: [12, 14]
+  e: [10, 12, 14]

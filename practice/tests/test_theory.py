@@ -16,7 +16,13 @@ EXPECTED_ROOT_FRETS = {
     "F#": 2, "G": 3, "G#": 4, "A": 5, "A#": 6, "B": 7,
 }
 
-# All 9 shipped scales: id -> (name, intervals, category).
+# Expected root fret on the A string for every key (A maps to 12, not 0).
+EXPECTED_ROOT_FRETS_LOW_A = {
+    "C": 3, "C#": 4, "D": 5, "D#": 6, "E": 7, "F": 8,
+    "F#": 9, "G": 10, "G#": 11, "A": 12, "A#": 1, "B": 2,
+}
+
+# All 11 shipped scales: id -> (name, intervals, category).
 EXPECTED_SCALES = {
     "major_pentatonic": ("Major Pentatonic", [0, 2, 4, 7, 9], "pentatonic"),
     "minor_pentatonic": ("Minor Pentatonic", [0, 3, 5, 7, 10], "pentatonic"),
@@ -25,6 +31,10 @@ EXPECTED_SCALES = {
     "major7_arpeggio": ("Major 7 Arpeggio", [0, 4, 7, 11], "arpeggio"),
     "minor7_arpeggio": ("Minor 7 Arpeggio", [0, 3, 7, 10], "arpeggio"),
     "dominant7_arpeggio": ("Dominant 7 Arpeggio", [0, 4, 7, 10], "arpeggio"),
+    "minor7b5_arpeggio":
+        ("Minor 7b5 Arpeggio", [0, 3, 6, 10], "arpeggio"),
+    "diminished7_arpeggio":
+        ("Diminished 7 Arpeggio", [0, 3, 6, 9], "arpeggio"),
     "major_scale": ("Major Scale", [0, 2, 4, 5, 7, 9, 11], "scale"),
     "natural_minor_scale":
         ("Natural Minor Scale", [0, 2, 3, 5, 7, 8, 10], "scale"),
@@ -94,11 +104,137 @@ class KeyTests(SimpleTestCase):
             with self.subTest(key=key):
                 self.assertEqual(theory.key_to_pc(key), pc)
 
+    def test_all_flat_keys_map_to_pitch_classes(self):
+        expected = {"Db": 1, "Eb": 3, "Gb": 6, "Ab": 8, "Bb": 10}
+        self.assertEqual(set(theory.FLAT_KEYS), set(expected))
+        for key, pc in expected.items():
+            with self.subTest(key=key):
+                self.assertEqual(theory.key_to_pc(key), pc)
+
+    def test_enharmonic_maps_are_consistent(self):
+        """SHARP_TO_FLAT / FLAT_TO_SHARP are inverse bijections over the 5
+        accidental pitch classes, and each pair shares a pitch class."""
+        self.assertEqual(len(theory.SHARP_TO_FLAT), 5)
+        self.assertEqual(
+            {theory.FLAT_TO_SHARP[f]: f for f in theory.FLAT_TO_SHARP},
+            theory.SHARP_TO_FLAT,
+        )
+        for sharp, flat in theory.SHARP_TO_FLAT.items():
+            with self.subTest(sharp=sharp, flat=flat):
+                self.assertEqual(theory.key_to_pc(sharp),
+                                 theory.key_to_pc(flat))
+                self.assertIn(sharp, theory.KEYS)
+                self.assertNotIn(flat, theory.KEYS)
+
+    def test_valid_keys_is_sharps_plus_flats(self):
+        self.assertEqual(theory.VALID_KEYS,
+                         theory.KEYS + theory.FLAT_KEYS)
+        self.assertEqual(len(theory.VALID_KEYS), 17)
+
     def test_unknown_key_raises(self):
-        for bad in ("H", "Bb", "", "a", None, 5):
+        # 'Cb'/'E#' are real spellings but not offered as keys; 'Bbb' is a
+        # double flat. All must be rejected as keys.
+        for bad in ("H", "Cb", "E#", "Bbb", "", "a", "bb", None, 5):
             with self.subTest(bad=bad):
                 with self.assertRaises(ValueError):
                     theory.key_to_pc(bad)
+
+
+class NoteNameParsingTests(SimpleTestCase):
+    def test_parse_note_name(self):
+        cases = {
+            "C": ("C", 0), "G": ("G", 0),
+            "C#": ("C", 1), "F#": ("F", 1), "E#": ("E", 1),
+            "Gb": ("G", -1), "Cb": ("C", -1), "Fb": ("F", -1),
+            "F##": ("F", 2), "Bbb": ("B", -2),
+        }
+        for name, expected in cases.items():
+            with self.subTest(name=name):
+                self.assertEqual(theory.parse_note_name(name), expected)
+
+    def test_parse_invalid_raises(self):
+        for bad in ("", "H", "c", "B#b", "Cx", "#", "b", None, 3, True):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValueError):
+                    theory.parse_note_name(bad)
+
+    def test_note_name_to_pc_all_spellings(self):
+        cases = {
+            # naturals
+            "C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11,
+            # sharps
+            "C#": 1, "D#": 3, "F#": 6, "G#": 8, "A#": 10,
+            # flats
+            "Db": 1, "Eb": 3, "Gb": 6, "Ab": 8, "Bb": 10,
+            # enharmonic edge spellings (wrap both ways round the octave)
+            "Cb": 11, "Fb": 4, "E#": 5, "B#": 0,
+            # double accidentals
+            "F##": 7, "Bbb": 9, "Cbb": 10, "B##": 1,
+        }
+        for name, pc in cases.items():
+            with self.subTest(name=name):
+                self.assertEqual(theory.note_name_to_pc(name), pc)
+
+
+class SpellingTests(SimpleTestCase):
+    """Diatonic spelling of scales — pc -> name maps per key."""
+
+    MAJOR = [0, 2, 4, 5, 7, 9, 11]
+
+    # Every flat key's major scale, spelled exactly (Gb includes Cb).
+    EXPECTED_FLAT_MAJOR = {
+        "Db": ["Db", "Eb", "F", "Gb", "Ab", "Bb", "C"],
+        "Eb": ["Eb", "F", "G", "Ab", "Bb", "C", "D"],
+        "Gb": ["Gb", "Ab", "Bb", "Cb", "Db", "Eb", "F"],
+        "Ab": ["Ab", "Bb", "C", "Db", "Eb", "F", "G"],
+        "Bb": ["Bb", "C", "D", "Eb", "F", "G", "A"],
+    }
+
+    def test_flat_major_scales_spelled_exactly(self):
+        for key, names in self.EXPECTED_FLAT_MAJOR.items():
+            with self.subTest(key=key):
+                root_pc = theory.key_to_pc(key)
+                spelling = theory.spell_scale(key, self.MAJOR)
+                got = [spelling[(root_pc + i) % 12] for i in self.MAJOR]
+                self.assertEqual(got, names)
+
+    def test_spelled_names_keep_their_pitch_classes(self):
+        """Round-trip: every spelled name maps back to its pitch class."""
+        for key in theory.VALID_KEYS:
+            with self.subTest(key=key):
+                for pc, name in theory.spell_scale(key, self.MAJOR).items():
+                    self.assertEqual(theory.note_name_to_pc(name), pc)
+
+    def test_seven_distinct_letters_per_major_key(self):
+        """Diatonic spelling uses each letter exactly once."""
+        for key in theory.VALID_KEYS:
+            with self.subTest(key=key):
+                letters = [name[0] for name
+                           in theory.spell_scale(key, self.MAJOR).values()]
+                self.assertEqual(sorted(letters), sorted("ABCDEFG"))
+
+    def test_sharp_key_spelling_examples(self):
+        # A major, the example key: no surprises.
+        self.assertEqual(
+            sorted(theory.spell_scale("A", self.MAJOR).values()),
+            sorted(["A", "B", "C#", "D", "E", "F#", "G#"]),
+        )
+        # F# major spelled from F# uses E# (the chromatic table can't).
+        self.assertIn("E#", theory.spell_scale("F#", self.MAJOR).values())
+
+    def test_spell_interval_tritone_is_diminished_fifth(self):
+        self.assertEqual(theory.spell_interval("Bb", 6), "Fb")
+        self.assertEqual(theory.spell_interval("C", 6), "Gb")
+
+    def test_spell_interval_wraps_mod_12(self):
+        self.assertEqual(theory.spell_interval("Gb", 5),
+                         theory.spell_interval("Gb", 17))
+
+    def test_spell_interval_invalid_interval_raises(self):
+        for bad in ("2", 2.0, None, True):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValueError):
+                    theory.spell_interval("Gb", bad)
 
 
 class RootFretTests(SimpleTestCase):
@@ -109,14 +245,40 @@ class RootFretTests(SimpleTestCase):
             with self.subTest(key=key):
                 self.assertEqual(theory.root_fret_low_e(key), fret)
 
+    def test_root_fret_low_e_flat_keys_match_sharp_equivalents(self):
+        for sharp, flat in theory.SHARP_TO_FLAT.items():
+            with self.subTest(sharp=sharp, flat=flat):
+                self.assertEqual(theory.root_fret_low_e(flat),
+                                 theory.root_fret_low_e(sharp))
+
+    def test_root_fret_low_a_all_12_keys(self):
+        """Every key, including the A -> 12 (not 0) edge case."""
+        self.assertEqual(set(EXPECTED_ROOT_FRETS_LOW_A), set(theory.KEYS))
+        for key, fret in EXPECTED_ROOT_FRETS_LOW_A.items():
+            with self.subTest(key=key):
+                self.assertEqual(theory.root_fret_low_a(key), fret)
+
+    def test_root_fret_low_a_flat_keys_match_sharp_equivalents(self):
+        for sharp, flat in theory.SHARP_TO_FLAT.items():
+            with self.subTest(sharp=sharp, flat=flat):
+                self.assertEqual(theory.root_fret_low_a(flat),
+                                 theory.root_fret_low_a(sharp))
+
     def test_unknown_key_raises(self):
-        with self.assertRaises(ValueError):
-            theory.root_fret_low_e("X")
+        for fn in (theory.root_fret_low_e, theory.root_fret_low_a):
+            with self.subTest(fn=fn.__name__):
+                with self.assertRaises(ValueError):
+                    fn("X")
 
     def test_anchor_fret_root_low_e_matches(self):
-        for key in theory.KEYS:
+        for key in theory.VALID_KEYS:
             self.assertEqual(theory.anchor_fret(key, "root_low_e"),
                              theory.root_fret_low_e(key))
+
+    def test_anchor_fret_root_low_a_matches(self):
+        for key in theory.VALID_KEYS:
+            self.assertEqual(theory.anchor_fret(key, "root_low_a"),
+                             theory.root_fret_low_a(key))
 
     def test_unknown_anchor_strategy_raises(self):
         with self.assertRaises(ValueError):
@@ -124,7 +286,7 @@ class RootFretTests(SimpleTestCase):
 
 
 class ScaleIntervalTests(SimpleTestCase):
-    def test_all_9_scales_literal(self):
+    def test_all_11_scales_literal(self):
         scales = theory.load_scales()
         self.assertEqual(set(scales), set(EXPECTED_SCALES))
         for scale_id, (name, intervals, category) in EXPECTED_SCALES.items():
@@ -152,19 +314,91 @@ class TabRoundTripTests(SimpleTestCase):
                 expected = {
                     theory.TAB_STRINGS[label]: frets
                     for label, frets in form["tab"].items()
+                    if frets  # skipped strings produce no notes
                 }
                 self.assertEqual(frets_by_string(notes), expected)
 
     def test_no_note_sounds_below_the_low_root(self):
-        """'Start on the root' convention, re-checked post-load."""
+        """'Start on the root' convention, re-checked post-load. Applies
+        to scale/arpeggio finger forms; pentatonic CAGED boxes are exempt
+        (they may play below the root)."""
         for form_id, form in theory.load_fingerings().items():
+            if form["category"] in theory.CAGED_CATEGORIES:
+                continue
             with self.subTest(form=form_id):
-                root_abs = 5  # low E fret 5 = A, the example-key root
+                root_string = theory.ANCHOR_ROOT_STRINGS[form["anchor"]]
+                root_abs = (theory.STRING_BASE_SEMITONES[root_string]
+                            + theory.anchor_fret(theory.EXAMPLE_KEY,
+                                                 form["anchor"]))
                 for label, frets in form["tab"].items():
                     string = theory.TAB_STRINGS[label]
                     base = theory.STRING_BASE_SEMITONES[string]
                     for fret in frets:
                         self.assertGreaterEqual(base + fret, root_abs)
+
+
+class ARootFormLiteralTests(SimpleTestCase):
+    """The A-string-root major-scale forms against the hand-verified TABs
+    from the source PDF ('A major scale, six different scale forms')."""
+
+    maxDiff = None
+
+    def test_a_root_1st_finger_form_in_a_matches_the_pdf(self):
+        window_start, notes = theory.resolve_form(
+            "major-scale-a-root-1st-finger-form", "A")
+        self.assertEqual(window_start, 12)
+        self.assertEqual(frets_by_string(notes), {
+            5: [12, 14, 16], 4: [12, 14, 16], 3: [13, 14, 16],
+            2: [14, 15, 17], 1: [14, 16, 17],
+        })
+
+    def test_a_root_2nd_finger_form_in_a_matches_the_pdf(self):
+        window_start, notes = theory.resolve_form(
+            "major-scale-a-root-2nd-finger-form", "A")
+        self.assertEqual(window_start, 10)
+        self.assertEqual(frets_by_string(notes), {
+            5: [12, 14], 4: [11, 12, 14], 3: [11, 13, 14],
+            2: [12, 14], 1: [10, 12, 14],
+        })
+
+    def test_a_root_4th_finger_form_in_a_matches_the_pdf(self):
+        window_start, notes = theory.resolve_form(
+            "major-scale-a-root-4th-finger-form", "A")
+        self.assertEqual(window_start, 9)
+        self.assertEqual(frets_by_string(notes), {
+            5: [12], 4: [9, 11, 12], 3: [9, 11],
+            2: [9, 10, 12], 1: [9, 10, 12],
+        })
+
+    def test_a_root_forms_never_touch_the_low_e_string(self):
+        for form_id in ("major-scale-a-root-1st-finger-form",
+                        "major-scale-a-root-2nd-finger-form",
+                        "major-scale-a-root-4th-finger-form"):
+            for key in theory.KEYS:
+                with self.subTest(form=form_id, key=key):
+                    _, notes = theory.resolve_form(form_id, key)
+                    self.assertNotIn(6, {n["string"] for n in notes})
+
+    def test_up_shift_b_key_4th_finger_a_root_form(self):
+        # B anchors at A-string fret 2; min offset -3 gives raw min fret
+        # -1, so the whole form shifts UP an octave (anchor 14).
+        window_start, notes = theory.resolve_form(
+            "major-scale-a-root-4th-finger-form", "B")
+        self.assertEqual(window_start, 11)
+        self.assertEqual(frets_by_string(notes), {
+            5: [14], 4: [11, 13, 14], 3: [11, 13],
+            2: [11, 12, 14], 1: [11, 12, 14],
+        })
+
+    def test_no_shift_e_key_1st_finger_a_root_form(self):
+        # E anchors at A-string fret 7; offsets 0..5 keep frets 7-12.
+        window_start, notes = theory.resolve_form(
+            "major-scale-a-root-1st-finger-form", "E")
+        self.assertEqual(window_start, 7)
+        self.assertEqual(frets_by_string(notes), {
+            5: [7, 9, 11], 4: [7, 9, 11], 3: [8, 9, 11],
+            2: [9, 10, 12], 1: [9, 11, 12],
+        })
 
 
 class ResolveFormExhaustiveTests(SimpleTestCase):
@@ -173,7 +407,7 @@ class ResolveFormExhaustiveTests(SimpleTestCase):
     def test_every_form_every_key(self):
         fingerings = theory.load_fingerings()
         scales = theory.load_scales()
-        self.assertEqual(len(fingerings), 3)
+        self.assertEqual(len(fingerings), 16)
         for form_id, form in fingerings.items():
             intervals = set(scales[form["scale"]]["intervals"])
             all_offsets = [o for offs in form["offsets"].values() for o in offs]
@@ -360,6 +594,122 @@ class HandVerifiedFixtureTests(SimpleTestCase):
         # All 7 notes of C major, no accidentals.
         self.assertEqual({n["note_name"] for n in notes},
                          {"C", "D", "E", "F", "G", "A", "B"})
+
+
+class FlatKeyResolveTests(SimpleTestCase):
+    """resolve_form in every flat key, for every shipped form.
+
+    A flat key must produce the *identical* fretboard (same strings, frets,
+    pitch classes, roots) as its sharp equivalent — only the note names
+    change, and they change to the correct diatonic flat spelling.
+    """
+
+    maxDiff = None
+
+    # Full major-scale spellings per flat key (Gb includes Cb, never B).
+    EXPECTED_MAJOR_NAMES = {
+        "Db": {"Db", "Eb", "F", "Gb", "Ab", "Bb", "C"},
+        "Eb": {"Eb", "F", "G", "Ab", "Bb", "C", "D"},
+        "Gb": {"Gb", "Ab", "Bb", "Cb", "Db", "Eb", "F"},
+        "Ab": {"Ab", "Bb", "C", "Db", "Eb", "F", "G"},
+        "Bb": {"Bb", "C", "D", "Eb", "F", "G", "A"},
+    }
+
+    def test_every_form_every_flat_key(self):
+        scales = theory.load_scales()
+        for form_id, form in theory.load_fingerings().items():
+            intervals = scales[form["scale"]]["intervals"]
+            for flat, sharp in theory.FLAT_TO_SHARP.items():
+                with self.subTest(form=form_id, key=flat):
+                    sharp_start, sharp_notes = theory.resolve_form(
+                        form_id, sharp)
+                    flat_start, flat_notes = theory.resolve_form(
+                        form_id, flat)
+
+                    # Same window, same physical notes.
+                    self.assertEqual(flat_start, sharp_start)
+                    strip = lambda ns: [
+                        {k: v for k, v in n.items() if k != "note_name"}
+                        for n in ns
+                    ]
+                    self.assertEqual(strip(flat_notes), strip(sharp_notes))
+
+                    # Forms are complete (every interval appears — enforced
+                    # at load time), so the name set is exactly the scale's
+                    # diatonic spelling in the flat key.
+                    self.assertEqual(
+                        {n["note_name"] for n in flat_notes},
+                        set(theory.spell_scale(flat, intervals).values()),
+                    )
+                    # Spelling is internally consistent: every name maps
+                    # back to its own pitch class.
+                    for n in flat_notes:
+                        self.assertEqual(
+                            theory.note_name_to_pc(n["note_name"]),
+                            n["pitch_class"],
+                        )
+                        self.assertEqual(
+                            n["is_root"],
+                            n["pitch_class"] == theory.key_to_pc(flat),
+                        )
+
+    def test_flat_major_forms_spell_the_expected_names(self):
+        """Literal spellings for the major-scale forms in every flat key."""
+        for form_id, form in theory.load_fingerings().items():
+            if form["scale"] != "major_scale":
+                continue
+            for flat, names in self.EXPECTED_MAJOR_NAMES.items():
+                with self.subTest(form=form_id, key=flat):
+                    _, notes = theory.resolve_form(form_id, flat)
+                    self.assertEqual({n["note_name"] for n in notes}, names)
+
+    def test_gb_major_spells_cb_not_b(self):
+        """The pitch class 11 note in Gb major must be Cb."""
+        for form_id, form in theory.load_fingerings().items():
+            if form["scale"] != "major_scale":
+                continue
+            with self.subTest(form=form_id):
+                _, notes = theory.resolve_form(form_id, "Gb")
+                pc11 = {n["note_name"] for n in notes
+                        if n["pitch_class"] == 11}
+                self.assertEqual(pc11, {"Cb"})
+
+    def test_sharp_keys_still_use_sharp_chromatic_names(self):
+        """The 50% sharp presentation is byte-identical to the old output."""
+        for form_id in theory.load_fingerings():
+            for key in theory.KEYS:
+                with self.subTest(form=form_id, key=key):
+                    _, notes = theory.resolve_form(form_id, key)
+                    for n in notes:
+                        self.assertEqual(
+                            n["note_name"],
+                            theory.NOTE_NAMES[n["pitch_class"]],
+                        )
+
+    def test_bb_major_4th_finger_form_ground_truth(self):
+        """Hand-checked fixture: Bb major, 4th finger form — the A#
+        fixture's fretboard with flat spellings (anchor fret 6)."""
+        window_start, notes = theory.resolve_form(
+            "major-scale-e-root-4th-finger-form", "Bb")
+        self.assertEqual(window_start, 2)
+        expected = [
+            {"string": 6, "fret": 6, "pitch_class": 10, "note_name": "Bb", "is_root": True},
+            {"string": 5, "fret": 3, "pitch_class": 0, "note_name": "C", "is_root": False},
+            {"string": 5, "fret": 5, "pitch_class": 2, "note_name": "D", "is_root": False},
+            {"string": 5, "fret": 6, "pitch_class": 3, "note_name": "Eb", "is_root": False},
+            {"string": 4, "fret": 3, "pitch_class": 5, "note_name": "F", "is_root": False},
+            {"string": 4, "fret": 5, "pitch_class": 7, "note_name": "G", "is_root": False},
+            {"string": 3, "fret": 2, "pitch_class": 9, "note_name": "A", "is_root": False},
+            {"string": 3, "fret": 3, "pitch_class": 10, "note_name": "Bb", "is_root": True},
+            {"string": 3, "fret": 5, "pitch_class": 0, "note_name": "C", "is_root": False},
+            {"string": 2, "fret": 3, "pitch_class": 2, "note_name": "D", "is_root": False},
+            {"string": 2, "fret": 4, "pitch_class": 3, "note_name": "Eb", "is_root": False},
+            {"string": 2, "fret": 6, "pitch_class": 5, "note_name": "F", "is_root": False},
+            {"string": 1, "fret": 3, "pitch_class": 7, "note_name": "G", "is_root": False},
+            {"string": 1, "fret": 5, "pitch_class": 9, "note_name": "A", "is_root": False},
+            {"string": 1, "fret": 6, "pitch_class": 10, "note_name": "Bb", "is_root": True},
+        ]
+        self.assertEqual(notes, expected)
 
 
 class ResolveFormErrorTests(SimpleTestCase):

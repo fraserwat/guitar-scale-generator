@@ -1,0 +1,15 @@
+# Hand-authored TAB written in the example key A (root = low E fret 5).
+# Convention: the form starts on the root — nothing below the low root is played.
+id: dominant7-arpeggio-e-root-2nd-finger-form
+scale: dominant7_arpeggio   # scale id from ../scales.yaml
+name: "Dominant 7 Arpeggio — 2nd Finger Form (E-root)"
+starting_finger: 2          # derived from the e-root 2nd finger major scale
+anchor: root_low_e
+example_key: A
+tab:
+  E: [5]
+  A: [4, 7]
+  D: [5, 7]
+  G: [6]
+  B: [5]
+  e: [3, 5]

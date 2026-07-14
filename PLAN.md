@@ -89,6 +89,37 @@ both derived from it. Theory demoted from generator to validator.
       Note: octave down-shift is now unreachable for valid forms (root-present
       ⇒ min offset ≤ 0).
 
+## v5 (2026-07-14): A-string-root major scale forms + `root_low_a` anchor
+
+Source: "A major scale, six different scale forms" PDF — the three
+A-string forms (1st/2nd/4th finger, root = A string fret 12) join the three
+shipped E-string forms. First second anchor strategy, built the way the v1
+TODO anticipated.
+
+- [x] `ANCHOR_ROOT_STRINGS = {"root_low_e": 6, "root_low_a": 5}` — anchor
+      strategy is now a data map (strategy -> root string); `anchor_fret`
+      generic over it (12-not-0 convention kept, so A-root forms in A sit at
+      the 12th position); `root_fret_low_a` alongside `root_fret_low_e`.
+- [x] Validation split: root-on-anchor-string (all forms) vs
+      nothing-below-the-root (scale/arpeggio only — pentatonic CAGED boxes
+      may play E-string notes below an A-string root, so they're exempt via
+      one `CAGED_CATEGORIES` gate; no new config fields).
+- [x] `display_label` now carries the anchor: "1st Finger Form (E-root)" /
+      "(A-root)" — the exercise header was the only place the player sees
+      the form and it couldn't tell same-finger variants apart.
+- [x] 3 new configs `major_scale_a_root_{1st,2nd,4th}_finger_form.yaml`
+      (hand-transcribed from the PDF, verified two ways: interval math +
+      shape-shift of the E-root forms with the B-string bump). 16 forms
+      total (6 scale + 10 arpeggio).
+- [x] Tests: 136 (was 121) — `root_fret_low_a` all 12 keys + flats; literal
+      PDF-TAB resolution for the 3 A-root forms incl. octave-shift cases
+      (key B anchors 2 -> shifts to 14); A-root forms never touch low E;
+      per-(scale, anchor) finger uniqueness + display_label uniqueness per
+      scale; broken-config coverage for root-missing-from-A and
+      below-A-string-root; pentatonic below-root carve-out (loads fine).
+      `resolve_form` needed zero changes — offsets were already
+      strategy-agnostic.
+
 ## Deferred (unchanged)
 - 7-string · Users/auth · Spaced repetition algorithm · Flat/sharp spelling · Config hot-reload
 - Restore full 41-form config set post-validation (rerun `scripts/generate_fingerings.py`, revert test count changes from v3 prune)

@@ -1,6 +1,5 @@
-# Hand-authored TAB (the source of truth), written in the example key A
-# (root = low E fret 5). Convention: the form starts on the root — nothing
-# below the low root is played.
+# Hand-authored TAB written in the example key A (root = low E fret 5).
+# Convention: the form starts on the root — nothing below the low root is played.
 id: major-scale-e-root-4th-finger-form
 scale: major_scale
 name: "Major Scale — 4th Finger Form (E-root)"

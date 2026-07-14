@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Guitar Scale Practice</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=6">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -76,14 +76,51 @@
     </section>
 
     <!-- ============ Results screen ============ -->
+    <!-- Summary card first, then rounds grouped by outcome ("Correct" /
+         "Needs work"). app.js fills the counts + lists and hides any empty
+         group (and the whole summary card when no rounds were played). -->
     <section id="results-screen" class="screen hidden">
-      <h2>Session results</h2>
-      <p id="results-totals" class="results-totals"></p>
-      <ul id="results-list" class="results-list"></ul>
+      <h2 class="results-heading">Session results</h2>
+
+      <div id="results-summary" class="results-summary">
+        <div class="results-summary-row">
+          <div>
+            <div id="results-score" class="results-score">0 / 0</div>
+            <div class="results-score-label">rounds correct</div>
+          </div>
+          <div id="results-pct" class="results-pct">0%</div>
+        </div>
+        <div class="results-bar" role="presentation">
+          <div id="results-bar-fill" class="results-bar-fill"></div>
+        </div>
+      </div>
+
+      <p id="results-empty" class="results-empty hidden">
+        No rounds completed — try a longer timer next time.
+      </p>
+
+      <section id="results-group-correct" class="results-group results-group-correct hidden">
+        <h3 class="results-group-title">
+          <span class="results-dot results-dot-correct" aria-hidden="true"></span>
+          Correct
+          <span id="results-count-correct" class="results-count">0</span>
+        </h3>
+        <ul id="results-list-correct" class="results-list"></ul>
+      </section>
+
+      <section id="results-group-incorrect" class="results-group results-group-incorrect hidden">
+        <h3 class="results-group-title">
+          <span class="results-dot results-dot-incorrect" aria-hidden="true"></span>
+          Needs work
+          <span id="results-count-incorrect" class="results-count">0</span>
+        </h3>
+        <ul id="results-list-incorrect" class="results-list"></ul>
+      </section>
+
       <button id="again-btn" class="btn btn-primary">Practice again</button>
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=4"></script>
+  <script src="{% static 'practice/app.js' %}?v=5"></script>
 </body>
 </html>

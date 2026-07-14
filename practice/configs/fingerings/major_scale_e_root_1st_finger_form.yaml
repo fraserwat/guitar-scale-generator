@@ -1,9 +1,5 @@
-# Hand-authored TAB (the source of truth), written in the example key A
-# (root = low E fret 5). Convention: the form starts on the root — nothing
-# below the low root is played.
-# DRAFT — three-notes-per-string from the root, extrapolated from Fraser's
-# spec ("first finger A maj would be E[5,7,9], A[5,7,9] etc"). VERIFY the
-# D/G/B/e strings before trusting.
+# Hand-authored TAB written in the example key A (root = low E fret 5).
+# Convention: the form starts on the root — nothing below the low root is played.
 id: major-scale-e-root-1st-finger-form
 scale: major_scale
 name: "Major Scale — 1st Finger Form (E-root)"

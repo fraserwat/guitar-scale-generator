@@ -21,8 +21,17 @@
   var hintEl = document.getElementById("hint");
   var correctBtn = document.getElementById("correct-btn");
   var incorrectBtn = document.getElementById("incorrect-btn");
-  var resultsTotalsEl = document.getElementById("results-totals");
-  var resultsListEl = document.getElementById("results-list");
+  var resultsSummaryEl = document.getElementById("results-summary");
+  var resultsScoreEl = document.getElementById("results-score");
+  var resultsPctEl = document.getElementById("results-pct");
+  var resultsBarFillEl = document.getElementById("results-bar-fill");
+  var resultsEmptyEl = document.getElementById("results-empty");
+  var resultsGroupCorrectEl = document.getElementById("results-group-correct");
+  var resultsGroupIncorrectEl = document.getElementById("results-group-incorrect");
+  var resultsCountCorrectEl = document.getElementById("results-count-correct");
+  var resultsCountIncorrectEl = document.getElementById("results-count-incorrect");
+  var resultsListCorrectEl = document.getElementById("results-list-correct");
+  var resultsListIncorrectEl = document.getElementById("results-list-incorrect");
   var againBtn = document.getElementById("again-btn");
 
   // ---- State --------------------------------------------------------------
@@ -286,33 +295,54 @@
     nextRound();
   }
 
+  /** One results row. Same language as the round header, e.g.
+   *  "F# Dominant 7 Arpeggio — A Shape · Ascending"; the key + scale get
+   *  the visual emphasis, the form/direction stay muted. */
+  function resultRow(r) {
+    var li = document.createElement("li");
+    var name = document.createElement("span");
+    name.className = "result-name";
+    name.textContent = r.key + " " + r.scale;
+    var meta = document.createElement("span");
+    meta.className = "result-meta";
+    meta.textContent = r.display_label + " · " + r.direction;
+    li.appendChild(name);
+    li.appendChild(meta);
+    return li;
+  }
+
+  /** Fill one outcome group (heading count + list); empty groups hide
+   *  entirely so an all-correct (or all-wrong) session stays tidy. */
+  function renderGroup(groupEl, countEl, listEl, items) {
+    countEl.textContent = String(items.length);
+    listEl.textContent = "";
+    items.forEach(function (r) { listEl.appendChild(resultRow(r)); });
+    groupEl.classList.toggle("hidden", items.length === 0);
+  }
+
   function endGame() {
     clearInterval(timerId);
     timerId = null;
     phase = "results";
 
+    var correct = rounds.filter(function (r) { return r.correct; });
+    var incorrect = rounds.filter(function (r) { return !r.correct; });
     var total = rounds.length;
-    var nCorrect = rounds.filter(function (r) { return r.correct; }).length;
-    resultsTotalsEl.textContent = total === 0
-      ? "No rounds completed."
-      : nCorrect + " / " + total + " correct";
+    var pct = total === 0 ? 0 : Math.round((correct.length / total) * 100);
 
-    resultsListEl.textContent = "";
-    rounds.forEach(function (r) {
-      var li = document.createElement("li");
-      li.className = r.correct ? "result-correct" : "result-incorrect";
-      var desc = document.createElement("span");
-      // Same language as the round header, e.g.
-      // "F# Dominant 7 Arpeggio — A Shape · Ascending".
-      desc.textContent =
-        r.key + " " + r.scale + " — " + r.display_label + " · " + r.direction;
-      var mark = document.createElement("span");
-      mark.className = r.correct ? "result-mark-correct" : "result-mark-incorrect";
-      mark.textContent = r.correct ? "✓ correct" : "✗ incorrect";
-      li.appendChild(desc);
-      li.appendChild(mark);
-      resultsListEl.appendChild(li);
-    });
+    // Summary card (hidden in favour of the empty-state note when no
+    // rounds were completed).
+    resultsSummaryEl.classList.toggle("hidden", total === 0);
+    resultsEmptyEl.classList.toggle("hidden", total !== 0);
+    resultsScoreEl.textContent = correct.length + " / " + total;
+    resultsPctEl.textContent = pct + "%";
+    resultsBarFillEl.style.width = pct + "%";
+
+    // Outcome groups: correct first, then the ones to revisit.
+    renderGroup(resultsGroupCorrectEl, resultsCountCorrectEl,
+                resultsListCorrectEl, correct);
+    renderGroup(resultsGroupIncorrectEl, resultsCountIncorrectEl,
+                resultsListIncorrectEl, incorrect);
 
     showScreen(resultsScreen);
   }
