@@ -8,6 +8,10 @@ from django.views.decorators.http import require_GET, require_POST
 from . import spaced_repetition, theory
 from .models import AttemptLog
 
+# Keep the API bound in sync with the model column (SQLite would silently
+# accept longer values; PostgreSQL/strict MySQL would 500 with a DataError).
+FORM_ID_MAX_LENGTH = AttemptLog._meta.get_field("form_id").max_length
+
 
 def index(request):
     """Single-page practice game."""
@@ -75,6 +79,10 @@ def api_log(request):
 
     if not isinstance(form_id, str) or not form_id.strip():
         errors["form_id"] = "Required; must be a non-empty string."
+    elif len(form_id) > FORM_ID_MAX_LENGTH:
+        errors["form_id"] = (
+            f"Must be at most {FORM_ID_MAX_LENGTH} characters."
+        )
     if not isinstance(scale, str) or scale not in valid_scales:
         errors["scale"] = f"Required; must be one of {valid_scales}."
     if not isinstance(key, str) or key not in theory.KEYS:

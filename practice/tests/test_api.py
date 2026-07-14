@@ -229,12 +229,28 @@ class LogApiTests(TestCase):
             "unknown direction": {**VALID_LOG_PAYLOAD, "direction": "Sideways"},
             "empty form_id": {**VALID_LOG_PAYLOAD, "form_id": ""},
             "form_id as int": {**VALID_LOG_PAYLOAD, "form_id": 7},
+            "form_id too long": {**VALID_LOG_PAYLOAD, "form_id": "x" * 65},
         }
         for label, payload in bad_payloads.items():
             with self.subTest(case=label):
                 resp = self.post_log(payload)
                 self.assertEqual(resp.status_code, 400)
         self.assertEqual(AttemptLog.objects.count(), 0)
+
+    def test_form_id_too_long_400_with_field_error(self):
+        """65 chars exceeds the model's max_length=64 → per-field 400."""
+        resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": "x" * 65})
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("form_id", resp.json()["errors"])
+        self.assertEqual(AttemptLog.objects.count(), 0)
+
+    def test_form_id_at_max_length_accepted(self):
+        """Exactly 64 chars fits the column; no membership check on
+        form_id, so any 64-char string logs fine."""
+        form_id = "x" * 64
+        resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": form_id})
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(AttemptLog.objects.get().form_id, form_id)
 
     def test_log_rejects_get(self):
         resp = self.client.get("/api/log/")
