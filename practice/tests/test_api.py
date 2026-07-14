@@ -4,7 +4,7 @@ import json
 import random
 from unittest import mock
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from practice import theory
 from practice.models import AttemptLog
@@ -265,6 +265,10 @@ class RoundKeySpellingTests(TestCase):
         self.assertTrue(seen & set(theory.SHARP_TO_FLAT))
 
 
+# Throttling is covered by test_ratelimit.py; disabled here so these
+# validation tests can POST freely (26 forms alone exceed the default
+# per-minute cap inside one test-run window).
+@override_settings(API_RATE_LIMIT_PER_MINUTE=0)
 class LogApiTests(TestCase):
     def post_log(self, payload, raw=None):
         body = raw if raw is not None else json.dumps(payload)
