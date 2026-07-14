@@ -52,8 +52,8 @@ class IndexPageTests(TestCase):
         self.assertIn('id="tab"', html)
         self.assertNotIn("tab-stub", html)
         # Cache-busted static includes.
-        self.assertIn("style.css?v=8", html)
-        self.assertIn("app.js?v=7", html)
+        self.assertIn("style.css?v=9", html)
+        self.assertIn("app.js?v=8", html)
 
 
 class RoundApiTests(TestCase):
