@@ -3,6 +3,12 @@
 Date: 2026-07-14. Scope: full repo at branch `worktree-agent-a608065df867fb560`
 (post secrets-to-.env change). Django 5.2.16, Python 3.13, SQLite.
 
+**Remediation status (updated 2026-07-14, branch `security-hardening-round-2`):**
+every finding below is now resolved or explicitly owned. H1, M1, M3, L2, L3
+fixed in this round; M2 fixed separately (merged to main); L1 is a documented
+dev-ergonomics trade-off; C1 (old key in git history) is owned by Fraser.
+Per-finding status lines below.
+
 ## Critical
 
 ### C1. Old SECRET_KEY is in git history — treat as compromised
@@ -15,6 +21,8 @@ Date: 2026-07-14. Scope: full repo at branch `worktree-agent-a608065df867fb560`
   deploy with the old key.** A fresh key has been generated for `.env`; if the
   repo is ever made public, either rewrite history (`git filter-repo`) or
   simply accept the old key as burned — it must not be reused either way.
+- **Status:** OPEN — owned by Fraser (history rewrite / key retirement).
+  Mitigation (key out of tracked files, fresh key in untracked `.env`) is done.
 
 ## High
 
@@ -36,6 +44,12 @@ Date: 2026-07-14. Scope: full repo at branch `worktree-agent-a608065df867fb560`
   `CSRF_COOKIE_SECURE = True`, and (once HTTPS is confirmed stable)
   `SECURE_HSTS_SECONDS` with `SECURE_HSTS_INCLUDE_SUBDOMAINS`/`_PRELOAD`.
   If behind a TLS-terminating proxy, also set `SECURE_PROXY_SSL_HEADER`.
+- **Status:** FIXED — `if not DEBUG:` block in `config/settings.py` sets
+  `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`,
+  `SECURE_HSTS_SECONDS` (env-tunable, default 3600 — raise to 31536000 once
+  HTTPS is stable), `SECURE_HSTS_INCLUDE_SUBDOMAINS`, and env-gated
+  `SECURE_HSTS_PRELOAD`. `check --deploy` now reports only W021 (preload off),
+  which is intentional until HSTS max-age reaches one year.
 
 ## Medium
 
@@ -49,6 +63,15 @@ Date: 2026-07-14. Scope: full repo at branch `worktree-agent-a608065df867fb560`
 - **Recommendation:** before production, add rate limiting (e.g.
   `django-ratelimit` per-IP on `api_log`) and/or require auth once the planned
   users/auth TODO lands. A row cap or periodic pruning is a cheap stopgap.
+- **Status:** FIXED — `practice/ratelimit.py` adds a cache-backed per-IP
+  fixed-window throttle, applied to `api_log` at the URL layer
+  (`practice/urls.py`). Limit is `API_RATE_LIMIT_PER_MINUTE`
+  (env `DJANGO_API_RATE_LIMIT_PER_MINUTE`, default 60; 0 disables); over-limit
+  requests get JSON 429 + Retry-After. Covered by
+  `practice/tests/test_ratelimit.py`. Caveats documented in the module:
+  LocMemCache counters are per-process, and behind a proxy the limit is
+  effectively global until real client IPs are configured. Auth remains a
+  future TODO.
 
 ### M2. `form_id` accepted unvalidated against known forms (known, fix in flight)
 - **Location:** `practice/views.py:76-77` — `form_id` only checked as a
@@ -57,7 +80,9 @@ Date: 2026-07-14. Scope: full repo at branch `worktree-agent-a608065df867fb560`
   (`practice/models.py:14`), which SQLite does not enforce.
 - **Risk:** arbitrary/oversized junk stored in `form_id`, corrupting future
   spaced-repetition inputs.
-- **Status:** known issue; a parallel change is fixing it. Not re-fixed here.
+- **Status:** FIXED separately (merged to main) — `api_log` now rejects
+  `form_id` longer than the model's `max_length` (`FORM_ID_MAX_LENGTH` in
+  `practice/views.py`).
 
 ### M3. Django admin enabled and unused
 - **Location:** `config/urls.py:6` (`path("admin/", admin.site.urls)`);
@@ -67,6 +92,9 @@ Date: 2026-07-14. Scope: full repo at branch `worktree-agent-a608065df867fb560`
 - **Recommendation:** remove the admin URL + `django.contrib.admin` until
   needed, or move it to a non-default path and restrict access when auth
   arrives.
+- **Status:** FIXED — admin URL removed from `config/urls.py` and
+  `django.contrib.admin` removed from `INSTALLED_APPS` (with comments on how
+  to restore both when users/auth land). `practice/admin.py` kept as a stub.
 
 ## Low
 
@@ -77,6 +105,10 @@ Date: 2026-07-14. Scope: full repo at branch `worktree-agent-a608065df867fb560`
   work; the fail-loud SECRET_KEY check only trips when DEBUG is false.
 - **Recommendation:** deployment docs/scripts must set `DJANGO_DEBUG=false`
   explicitly; consider flipping the default to false at production cutover.
+- **Status:** ACCEPTED (documented trade-off) — the default-true keeps fresh
+  clones/tests working without a `.env` (a hard project constraint); prod
+  deployments must set `DJANGO_DEBUG=false`, at which point the fail-loud
+  SECRET_KEY guard and the H1 hardening block both engage. Revisit at cutover.
 
 ### L2. Dependencies are range-pinned, not locked
 - **Location:** `requirements.txt` (`Django>=5.2,<6`, `PyYAML>=6.0`,
@@ -88,6 +120,9 @@ Date: 2026-07-14. Scope: full repo at branch `worktree-agent-a608065df867fb560`
 - **Recommendation:** for production, generate a lock file (`pip-compile` or
   `pip freeze > requirements.lock`) and update deliberately; keep the venv's
   Django on the latest 5.2.x patch.
+- **Status:** FIXED — `requirements.lock` added (exact pins from the working
+  venv) with regeneration instructions; `requirements.txt` stays range-pinned
+  for development.
 
 ### L3. No `STATIC_ROOT` configured
 - **Location:** `config/settings.py` (`STATIC_URL` only).
@@ -95,6 +130,9 @@ Date: 2026-07-14. Scope: full repo at branch `worktree-agent-a608065df867fb560`
   serving with DEBUG on. Deployment hygiene rather than a direct vuln.
 - **Recommendation:** set `STATIC_ROOT` and serve via WhiteNoise or the web
   server at deploy time.
+- **Status:** FIXED — `STATIC_ROOT = BASE_DIR / "staticfiles"` set in
+  `config/settings.py` (path already gitignored). Choice of static server is
+  deferred to deployment.
 
 ## Verified OK
 
