@@ -33,6 +33,10 @@ class IndexPageTests(TestCase):
         self.assertIn('id="start-btn"', html)
         self.assertIn("coming soon", html)
         self.assertIn("data-csrf-token", html)
+        # App name is ScaleRunner; the title h1 is the click-to-menu hook.
+        self.assertIn("<title>ScaleRunner</title>", html)
+        self.assertIn('<h1 class="app-title" title="Back to menu">ScaleRunner</h1>', html)
+        self.assertNotIn("Guitar Scale Practice", html)
 
     def test_index_has_v2_ui_hooks(self):
         """Category-language header slots + start-menu keyboard tip."""
@@ -48,8 +52,8 @@ class IndexPageTests(TestCase):
         self.assertIn('id="tab"', html)
         self.assertNotIn("tab-stub", html)
         # Cache-busted static includes.
-        self.assertIn("style.css?v=6", html)
-        self.assertIn("app.js?v=5", html)
+        self.assertIn("style.css?v=7", html)
+        self.assertIn("app.js?v=6", html)
 
 
 class RoundApiTests(TestCase):

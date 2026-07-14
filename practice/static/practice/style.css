@@ -1,4 +1,4 @@
-/* Guitar Scale Practice — dark theme (high-contrast: text/controls aim for
+/* ScaleRunner — dark theme (high-contrast: text/controls aim for
    WCAG AA against the background). */
 
 :root {
@@ -29,12 +29,19 @@ body {
   padding: 2rem 1rem 3rem;
 }
 
+/* The title doubles as a home link (click = back to the menu). */
 .app-title {
   font-size: 1.4rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--muted);
   margin: 0 0 1.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.app-title:hover {
+  color: var(--text);
 }
 
 .hidden { display: none !important; }

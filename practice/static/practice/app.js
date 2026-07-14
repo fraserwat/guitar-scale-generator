@@ -1,4 +1,4 @@
-/* Guitar Scale Practice — game logic (vanilla JS, no build step). */
+/* ScaleRunner — game logic (vanilla JS, no build step). */
 (function () {
   "use strict";
 
@@ -6,6 +6,7 @@
   var CSRF_TOKEN = document.body.dataset.csrfToken;
 
   // ---- Elements -----------------------------------------------------------
+  var appTitleEl = document.querySelector(".app-title");
   var startScreen = document.getElementById("start-screen");
   var exerciseScreen = document.getElementById("exercise-screen");
   var resultsScreen = document.getElementById("results-screen");
@@ -349,6 +350,14 @@
 
   // ---- Events ---------------------------------------------------------------
   startBtn.addEventListener("click", startGame);
+  // The title is a home link: from any screen it abandons the session
+  // (timer stopped, rounds discarded — no results) and shows the menu.
+  appTitleEl.addEventListener("click", function () {
+    clearInterval(timerId);
+    timerId = null;
+    phase = "idle";
+    showScreen(startScreen);
+  });
   againBtn.addEventListener("click", function () {
     phase = "idle";
     showScreen(startScreen);

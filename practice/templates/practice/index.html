@@ -3,13 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Guitar Scale Practice</title>
+  <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=6">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=7">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
-    <h1 class="app-title">Guitar Scale Practice</h1>
+    <!-- The title doubles as a home link: clicking it mid-game abandons
+         the session and returns to the start menu (see app.js). -->
+    <h1 class="app-title" title="Back to menu">ScaleRunner</h1>
 
     <!-- ============ Start screen ============ -->
     <section id="start-screen" class="screen">
@@ -121,6 +123,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=5"></script>
+  <script src="{% static 'practice/app.js' %}?v=6"></script>
 </body>
 </html>

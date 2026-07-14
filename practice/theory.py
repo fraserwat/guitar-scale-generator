@@ -1,4 +1,4 @@
-"""Music theory engine for the guitar scale practice game.
+"""Music theory engine for ScaleRunner, the guitar scale practice game.
 
 Scales and fingering forms are config-driven:
   * practice/configs/scales.yaml        — scale id -> {name, intervals}
