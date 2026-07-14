@@ -64,7 +64,9 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    # django.contrib.admin deliberately not installed: no models are
+    # registered, so its login page is pure attack surface (SECURITY_AUDIT.md
+    # M3). Re-add it (plus the URL in config/urls.py) when users/auth land.
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -149,6 +151,31 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+
+# Where collectstatic gathers files for production serving (gitignored).
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Per-IP request cap for POST /api/log/, enforced by practice/ratelimit.py
+# over a fixed one-minute window. Set to 0 (or negative) to disable.
+API_RATE_LIMIT_PER_MINUTE = int(
+    os.environ.get("DJANGO_API_RATE_LIMIT_PER_MINUTE", "60")
+)
+
+
+# Production hardening (SECURITY_AUDIT.md H1) — applied whenever DEBUG is off.
+# If the app sits behind a TLS-terminating reverse proxy, also set
+# SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") and ensure the
+# proxy strips any client-supplied X-Forwarded-Proto header.
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # Start with a short HSTS max-age; raise to 31536000 (1 year) once HTTPS
+    # is confirmed stable, then consider enabling preload.
+    SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "3600"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = _env_bool("DJANGO_SECURE_HSTS_PRELOAD", default="false")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
