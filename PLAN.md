@@ -12,7 +12,7 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done · `[!]` blocked
 Whole-repo sweep: theory.py, views.py, generator script, tests, settings, YAML configs.
 Test suite: 84/84 green at end of hunt.
 
-### Finding 1 (only finding, low severity) — CONFIRMED, unfixed
+### Finding 1 (only finding, low severity) — FIXED 2026-07-14 (v3, agent A)
 `POST /api/log/` accepts an unbounded `form_id` and stores it past the model's
 declared limit.
 - Location: practice/views.py:76-77 (validation) vs practice/models.py:14
@@ -41,5 +41,19 @@ concurrent frontend agent's in-flight edits; it updated index.html and
 practice/tests/test_api.py (a Python test file, not just frontend) to a
 consistent state and the suite is green.
 
+---
+
+## v3 (2026-07-14): parallel agent round — bugfix · E-root prune · security
+
+Three worktree-isolated agents branched from checkpoint `46c8ffb`, merged A → C → B, zero conflicts. Suite 86/86 green on merged main; orchestrator verification passed.
+
+- [x] **Agent A — Finding 1 fixed.** `POST /api/log/` now rejects `form_id` > 64 chars with 400; bound derived from `AttemptLog._meta.get_field("form_id").max_length` (practice/views.py). Regression tests: 65-char → 400, 64-char boundary → 201 (practice/tests/test_api.py).
+- [x] **Agent B — shipped fingerings pruned to the 3 E-root major-scale forms** (`major_scale_{1st,2nd,4th}_finger_form.yaml`) for manual validation; the other 38 yamls deleted. All non-yaml functionality (scales.yaml, theory.py, generator, views, frontend) retained, viable but unused. Generator tests repointed to temp dirs (running `scripts/generate_fingerings.py` against the live dir would regenerate all 41 — warned in README); new test pins shipped files byte-identical to generator output; exhaustive 41-form × 12-key theory coverage preserved via temp-dir generation. README: "Adding a new scale form" section added.
+- [x] **Agent C — SECRET_KEY moved to .env** (python-dotenv; `DJANGO_SECRET_KEY`/`DJANGO_DEBUG`/`DJANGO_ALLOWED_HOSTS`; fail-loud `ImproperlyConfigured` when DEBUG=false without a key). `.env` gitignored, `.env.example` tracked, README setup bullets. Full audit in **SECURITY_AUDIT.md** — headline items: old committed key is burned (in git history at `46c8ffb`; never reuse), prod hardening block (HSTS/secure cookies/SSL redirect) still TODO, `/api/log/` has no rate limiting, admin exposed unused. Report-only items intentionally not implemented this round.
+
+Orchestrator verification on merged main: 86/86 tests OK; fingerings dir = exactly 3 yamls + README; 10× `/api/round/` served only the 3 kept ids; overlong-form_id POST → 400; `git grep django-insecure` clean in tracked files; fresh local `.env` key generated (agent-reported key discarded as transcript-exposed).
+
 ## Deferred (unchanged)
 - 7-string · Real TAB rendering · Users/auth · Spaced repetition algorithm · Flat/sharp spelling · Config hot-reload
+- Restore full 41-form config set post-validation (rerun `scripts/generate_fingerings.py`, revert test count changes from v3 prune)
+- SECURITY_AUDIT.md report-only items (prod hardening block, rate limiting, admin removal)
