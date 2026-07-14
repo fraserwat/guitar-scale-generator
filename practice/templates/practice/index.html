@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Guitar Scale Practice</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=4">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -62,10 +62,10 @@
       <svg id="neck" class="neck" viewBox="0 0 560 240" role="img"
            aria-label="Guitar neck diagram"></svg>
 
-      <!-- TODO(tab): render actual TAB numbers for the scale run here.
-           For now this is an empty visual stub. -->
-      <svg id="tab-stub" class="tab-stub" viewBox="0 0 560 130" role="img"
-           aria-label="Empty tablature staff"></svg>
+      <!-- TAB of the round's run: staff drawn immediately, numbers hidden
+           until the answer reveal (they'd give the position away). -->
+      <svg id="tab" class="tab" viewBox="0 0 560 130" role="img"
+           aria-label="Tablature"></svg>
 
       <p id="hint" class="hint">Play the scale, then press <kbd>SPACE</kbd> to reveal the notes.</p>
 
@@ -84,6 +84,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=3"></script>
+  <script src="{% static 'practice/app.js' %}?v=4"></script>
 </body>
 </html>

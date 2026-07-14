@@ -54,7 +54,42 @@ Three worktree-isolated agents branched from checkpoint `46c8ffb`, merged A → 
 
 Orchestrator verification on merged main: 86/86 tests OK; fingerings dir = exactly 3 yamls + README; 10× `/api/round/` served only the 3 kept ids; overlong-form_id POST → 400; `git grep django-insecure` clean in tracked files; fresh local `.env` key generated (agent-reported key discarded as transcript-exposed).
 
+---
+
+## v4 (2026-07-14): TAB-as-source + real TAB rendering
+
+The generated 4th-finger major-scale form was wrong vs convention (E/G strings;
+two notes below the low root — these "start on the root" forms never play below
+it). Convention can't be derived from interval math, so the architecture
+inverted: **each fingering yaml is a hand-authored TAB in the fixed example key
+A** (root = low E fret 5), and the neck diagram AND a real TAB rendering are
+both derived from it. Theory demoted from generator to validator.
+
+- [x] New yaml schema: `example_key: A` + `tab:` with `E A D G B e` labels
+      replaces `anchor`-relative `offsets` (loader derives offsets at load
+      time; resolve/transposition/API payload unchanged). Legacy `offsets`
+      schema rejected with a migration hint.
+- [x] New hard validation: frets ≥ 1; low-E root present; **nothing sounds
+      below the low root** (absolute-pitch check — catches exactly the class
+      of error the generator made); plus the retained span ≤ 6 / in-scale /
+      full-interval-coverage checks.
+- [x] Files renamed for root-string specificity (A-root variants planned):
+      `major_scale_e_root_{1st,2nd,4th}_finger_form.yaml`, ids
+      `major-scale-e-root-*-finger-form`. 4th = Fraser's verified TAB;
+      1st/2nd drafted from his spec (3nps from root / position form) —
+      **pending Fraser's verification** (he trimmed 2nd-form e-string to
+      [4,5] during the build; 1st form still DRAFT).
+- [x] Real TAB rendering in app.js (deferred item done): numbers on the
+      six-line staff in play order, Descending = reversed run; roots orange;
+      hidden until the answer reveal like the neck's fret labels.
+- [x] `scripts/generate_fingerings.py` + `test_generator.py` DELETED (git
+      history keeps them). test_theory reworked: exhaustive coverage = 3
+      shipped forms × 12 keys + TAB round-trip invariant (key-A resolution
+      reproduces the authored TAB verbatim) + Fraser's ground-truth fixture.
+      Note: octave down-shift is now unreachable for valid forms (root-present
+      ⇒ min offset ≤ 0).
+
 ## Deferred (unchanged)
-- 7-string · Real TAB rendering · Users/auth · Spaced repetition algorithm · Flat/sharp spelling · Config hot-reload
+- 7-string · Users/auth · Spaced repetition algorithm · Flat/sharp spelling · Config hot-reload
 - Restore full 41-form config set post-validation (rerun `scripts/generate_fingerings.py`, revert test count changes from v3 prune)
 - Rotate/burn the old committed secret key if repo ever goes public (in history at `46c8ffb`) · raise HSTS to 1 year + preload once HTTPS is stable

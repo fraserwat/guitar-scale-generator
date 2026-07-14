@@ -123,7 +123,7 @@ select {
 .round-sep { margin: 0 0.15rem; }
 .round-direction { color: var(--muted); font-style: italic; }
 
-.neck, .tab-stub {
+.neck, .tab {
   width: 100%;
   height: auto;
   display: block;

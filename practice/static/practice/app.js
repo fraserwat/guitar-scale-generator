@@ -17,7 +17,7 @@
   var roundDirectionEl = document.getElementById("round-direction");
   var roundLabelEl = document.getElementById("round-label");
   var neckSvg = document.getElementById("neck");
-  var tabSvg = document.getElementById("tab-stub");
+  var tabSvg = document.getElementById("tab");
   var hintEl = document.getElementById("hint");
   var correctBtn = document.getElementById("correct-btn");
   var incorrectBtn = document.getElementById("incorrect-btn");
@@ -119,22 +119,64 @@
     neckSvg.appendChild(dots);
   }
 
-  // ---- TAB stub -------------------------------------------------------------
-  // TODO(tab): render actual TAB numbers for the scale run (respecting the
-  // round's direction) instead of this empty six-line staff.
-  function drawTabStub() {
+  // ---- TAB ------------------------------------------------------------------
+  // Six-line staff redrawn per round; the run's numbers are laid out into a
+  // HIDDEN group (like the neck's fret labels) and revealed with the answer.
+  var TAB = { left: 32, right: 545, top: 20, lineGap: 18 };
+
+  // y coordinate for a string number on the TAB staff (1 = high e at top).
+  function tabY(stringNum) {
+    return TAB.top + (stringNum - 1) * TAB.lineGap;
+  }
+
+  /** Draw the TAB staff; with a round, also lay out the run's numbers.
+   *  The API's notes arrive in ascending play order (low string first, then
+   *  fret), so Ascending renders as-is left to right from the low root and
+   *  Descending is the same run reversed, starting on the top note. */
+  function drawTab(round) {
     tabSvg.textContent = "";
     var labels = ["e", "B", "G", "D", "A", "E"];
     for (var i = 0; i < 6; i++) {
-      var y = 20 + i * 18;
+      var y = TAB.top + i * TAB.lineGap;
       tabSvg.appendChild(el("text", {
         x: 18, y: y + 5, "text-anchor": "middle",
         fill: "#aab5c5", "font-size": 13, "font-family": "monospace"
       }, labels[i]));
       tabSvg.appendChild(el("line", {
-        x1: 32, y1: y, x2: 545, y2: y, stroke: "#4b5568", "stroke-width": 1
+        x1: TAB.left, y1: y, x2: TAB.right, y2: y,
+        stroke: "#4b5568", "stroke-width": 1
       }));
     }
+    if (!round) return; // start screen: staff only, no run yet
+
+    var seq = round.notes.slice();
+    if (round.direction === "Descending") seq.reverse();
+
+    var numbers = el("g", { id: "tab-numbers", display: "none" });
+    var colW = (TAB.right - TAB.left - 10) / seq.length;
+    seq.forEach(function (note, idx) {
+      var cx = TAB.left + 10 + (idx + 0.5) * colW;
+      var cy = tabY(note.string);
+      // Mask the staff line behind the number (conventional TAB look).
+      numbers.appendChild(el("rect", {
+        x: cx - 8, y: cy - 7, width: 16, height: 14, fill: "#0c0f14"
+      }));
+      var num = el("text", {
+        x: cx, y: cy + 5, "text-anchor": "middle",
+        fill: note.is_root ? "#f59f3d" : "#eef2f8",
+        "font-size": 13, "font-family": "monospace",
+        "font-weight": note.is_root ? "bold" : "normal"
+      }, String(note.fret));
+      num.appendChild(el("title", {}, note.note_name));
+      numbers.appendChild(num);
+    });
+    tabSvg.appendChild(numbers);
+  }
+
+  /** Unhide the TAB numbers (answer phase only). */
+  function revealTabNumbers() {
+    var numbers = tabSvg.querySelector("#tab-numbers");
+    if (numbers) numbers.removeAttribute("display");
   }
 
   // ---- Screens & timer ------------------------------------------------------
@@ -162,7 +204,7 @@
     timeLeft = parseInt(timerLengthEl.value, 10) * 60;
     timerEl.textContent = formatTime(timeLeft);
     showScreen(exerciseScreen);
-    drawTabStub();
+    drawTab(null);
     timerId = setInterval(tick, 1000);
     nextRound();
   }
@@ -191,6 +233,7 @@
         roundLabelEl.textContent = round.display_label;
         roundDirectionEl.textContent = round.direction;
         drawNeck(round.window_start); // UNFILLED (and unlabelled) until spacebar
+        drawTab(round); // staff visible, numbers hidden until spacebar
         phase = "play";
       })
       .catch(function (err) {
@@ -203,6 +246,7 @@
     if (phase !== "play" || !currentRound) return;
     drawNotes(currentRound);
     revealFretLabels();
+    revealTabNumbers();
     correctBtn.disabled = false;
     incorrectBtn.disabled = false;
     hintEl.textContent = "Did you play it right?";

@@ -42,9 +42,12 @@ class IndexPageTests(TestCase):
         self.assertNotIn("key-hint", html)
         self.assertIn("for correct", html)
         self.assertIn("for incorrect", html)
+        # Real TAB element (the empty -stub era is over).
+        self.assertIn('id="tab"', html)
+        self.assertNotIn("tab-stub", html)
         # Cache-busted static includes.
-        self.assertIn("style.css?v=3", html)
-        self.assertIn("app.js?v=3", html)
+        self.assertIn("style.css?v=4", html)
+        self.assertIn("app.js?v=4", html)
 
 
 class RoundApiTests(TestCase):

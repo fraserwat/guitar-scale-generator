@@ -4,9 +4,16 @@ Scales and fingering forms are config-driven:
   * practice/configs/scales.yaml        — scale id -> {name, intervals}
   * practice/configs/fingerings/*.yaml  — one fingering form per file
 
-Configs are validated aggressively at load time (declared shapes can contain
-typos), and loading fails loudly with an error naming the offending file,
-string, and offset.
+Each fingering form is a hand-authored TAB written in the fixed example key
+(EXAMPLE_KEY): convention — which frets a form actually uses — is empirical
+knowledge that interval math can't derive, so the TAB is the source of truth
+and the theory here acts as a validator. The loader converts the TAB to
+anchor-relative offsets once, at load time; everything downstream (transposing
+to a key, the neck diagram, the rendered TAB) derives from that.
+
+Configs are validated aggressively at load time (hand-authored TABs can
+contain typos), and loading fails loudly with an error naming the offending
+file, string, and fret.
 
 Only the config loading touches the filesystem; everything else is pure and
 unit-testable. No Django imports here.
@@ -46,6 +53,18 @@ STANDARD_TUNING = {
 WINDOW_SIZE = 6
 
 ANCHOR_STRATEGIES = ("root_low_e",)
+
+# All TABs are authored in this one key (root = low E fret 5). A single fixed
+# key keeps hand-authored configs directly comparable and the loader trivial.
+EXAMPLE_KEY = "A"
+
+# TAB string labels (standard tuning, low E to high e) -> string numbers.
+TAB_STRINGS = {"E": 6, "A": 5, "D": 4, "G": 3, "B": 2, "e": 1}
+
+# Semitones of each open string ABOVE the open low E — absolute pitch, not
+# pitch class. Used to reject notes that sound below the low root: these
+# "start on the root" forms never play below it.
+STRING_BASE_SEMITONES = {6: 0, 5: 5, 4: 10, 3: 15, 2: 19, 1: 24}
 
 # Scale categories drive the fingering-form label language:
 #   pentatonic/arpeggio forms -> CAGED shapes ("E Shape")
@@ -192,7 +211,14 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
     if not isinstance(raw, dict):
         raise ConfigError(f"{path}: expected a mapping at the top level")
 
-    required = ("id", "scale", "name", "anchor", "offsets")
+    if "offsets" in raw:
+        raise ConfigError(
+            f"{path}: legacy 'offsets' schema — forms are now defined as a "
+            f"hand-authored 'tab' in the fixed example key {EXAMPLE_KEY!r} "
+            f"(see practice/configs/fingerings/README.md)"
+        )
+
+    required = ("id", "scale", "name", "anchor", "example_key", "tab")
     missing = [k for k in required if k not in raw]
     if missing:
         raise ConfigError(f"{path}: missing required field(s): {', '.join(missing)}")
@@ -249,41 +275,74 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
             f"(expected one of {ANCHOR_STRATEGIES})"
         )
 
-    offsets = raw["offsets"]
-    if not isinstance(offsets, dict) or set(offsets) != {1, 2, 3, 4, 5, 6}:
+    if raw["example_key"] != EXAMPLE_KEY:
         raise ConfigError(
-            f"{path}: 'offsets' must have exactly the string keys 1-6, "
-            f"got {sorted(offsets) if isinstance(offsets, dict) else offsets!r}"
+            f"{path}: 'example_key' must be {EXAMPLE_KEY!r} (all TABs are "
+            f"authored in the same fixed key), got {raw['example_key']!r}"
         )
-    for string, offs in offsets.items():
-        if not isinstance(offs, list) or not offs or not all(map(_is_int, offs)):
-            raise ConfigError(
-                f"{path}: string {string}: offsets must be a non-empty list of ints"
-            )
 
-    all_offsets = [o for offs in offsets.values() for o in offs]
-    span = max(all_offsets) - min(all_offsets)
+    tab = raw["tab"]
+    if not isinstance(tab, dict) or set(tab) != set(TAB_STRINGS):
+        raise ConfigError(
+            f"{path}: 'tab' must have exactly the string keys "
+            f"{list(TAB_STRINGS)} (low E to high e), got "
+            f"{sorted(tab, key=str) if isinstance(tab, dict) else tab!r}"
+        )
+    for label, frets in tab.items():
+        if not isinstance(frets, list) or not frets or not all(map(_is_int, frets)):
+            raise ConfigError(
+                f"{path}: string {label}: tab must be a non-empty list of ints"
+            )
+        for fret in frets:
+            if fret < 1:
+                raise ConfigError(
+                    f"{path}: string {label}, fret {fret}: frets must be "
+                    f">= 1 (open strings don't transpose)"
+                )
+
+    example_anchor = anchor_fret(EXAMPLE_KEY, raw["anchor"])  # low-E root fret
+
+    all_frets = [f for frets in tab.values() for f in frets]
+    span = max(all_frets) - min(all_frets)
     if span > WINDOW_SIZE - 1:
         raise ConfigError(
             f"{path}: form spans {span + 1} frets "
-            f"(max {WINDOW_SIZE}): offsets {min(all_offsets)}..{max(all_offsets)}"
+            f"(max {WINDOW_SIZE}): frets {min(all_frets)}..{max(all_frets)}"
         )
 
-    # Musical validation: every declared note must belong to the scale.
-    # interval = (open_pc + anchor_fret + offset - root_pc) mod 12 is
-    # key-independent for the root_low_e anchor, since
-    # anchor_fret - root_pc == -open_pc_of_low_E == 8 (mod 12).
+    # "Start on the root" convention: the root must be present on the low E
+    # string, and no note may sound below it.
+    if example_anchor not in tab["E"]:
+        raise ConfigError(
+            f"{path}: the low-E root ({EXAMPLE_KEY} at fret {example_anchor}) "
+            f"must appear on string E — forms start on the root"
+        )
+    root_abs = STRING_BASE_SEMITONES[6] + example_anchor
+    for label, frets in tab.items():
+        string = TAB_STRINGS[label]
+        for fret in frets:
+            if STRING_BASE_SEMITONES[string] + fret < root_abs:
+                raise ConfigError(
+                    f"{path}: string {label}, fret {fret}: sounds below the "
+                    f"low root ({EXAMPLE_KEY} at low-E fret {example_anchor}) "
+                    f"— these forms never play below the root"
+                )
+
+    # Musical validation in the example key: every declared note must belong
+    # to the scale. TAB_STRINGS iterates low E -> high e, so validation
+    # errors report low-string problems first (matching how guitarists read
+    # the shapes).
+    root_pc = key_to_pc(EXAMPLE_KEY)
     interval_set = set(scales[scale_id]["intervals"])
     covered = set()
-    # Iterate string 6 -> 1 so validation errors report low-string problems
-    # first (matching how guitarists read the shapes).
-    for string, offs in sorted(offsets.items(), reverse=True):
-        for offset in offs:
-            interval = (STANDARD_TUNING[string] + offset + 8) % 12
+    for label, string in TAB_STRINGS.items():
+        for fret in tab[label]:
+            pc = (STANDARD_TUNING[string] + fret) % 12
+            interval = (pc - root_pc) % 12
             if interval not in interval_set:
                 raise ConfigError(
-                    f"{path}: string {string}, offset {offset}: interval "
-                    f"{interval} is not in scale {scale_id!r} "
+                    f"{path}: string {label}, fret {fret}: {note_name(pc)} "
+                    f"(interval {interval}) is not in scale {scale_id!r} "
                     f"(intervals {sorted(interval_set)})"
                 )
             covered.add(interval)
@@ -307,8 +366,15 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
         "caged_shape": caged_shape,
         "starting_finger": starting_finger,
         "anchor": raw["anchor"],
-        # Stored pre-sorted so resolve_form can iterate without re-sorting.
-        "offsets": {s: sorted(offs) for s, offs in offsets.items()},
+        "example_key": raw["example_key"],
+        "tab": {label: sorted(frets) for label, frets in tab.items()},
+        # Anchor-relative offsets derived from the TAB; everything downstream
+        # (resolve_form, the diagrams) consumes these. Pre-sorted so
+        # resolve_form can iterate without re-sorting.
+        "offsets": {
+            TAB_STRINGS[label]: sorted(f - example_anchor for f in frets)
+            for label, frets in tab.items()
+        },
     }
 
 

@@ -141,12 +141,13 @@ Per-finding status lines below.
   credentials in `practice/configs/` or scripts.
 - Fail-loud config: with `DJANGO_DEBUG=false` and no `DJANGO_SECRET_KEY`,
   startup raises `django.core.exceptions.ImproperlyConfigured` (verified).
-- YAML: `yaml.safe_load` everywhere (`practice/theory.py:150,336`,
-  `scripts/generate_fingerings.py:83`); no `yaml.load`/unsafe loaders.
+- YAML: `yaml.safe_load` everywhere (`practice/theory.py`); no
+  `yaml.load`/unsafe loaders. (The generator script and its
+  subprocess-based tests audited here were deleted in v4 — fingering
+  forms are hand-authored TABs now.)
 - No `csrf_exempt`, `mark_safe`, `|safe`, `{% autoescape off %}`, raw SQL,
-  `.extra(`, `.raw(`, string-built queries, `eval`/`exec`, `pickle`, or
-  `os.system` anywhere in app code; `subprocess.run` appears only in
-  `practice/tests/test_generator.py:39` with a fixed argv (no shell).
+  `.extra(`, `.raw(`, string-built queries, `eval`/`exec`, `pickle`,
+  `subprocess`, or `os.system` anywhere in app code.
 - CSRF: token is passed via `data-csrf-token` (`templates/practice/index.html:10`)
   and sent as `X-CSRFToken` on the fetch POST (`static/practice/app.js:6,231`);
   `CsrfViewMiddleware` active.

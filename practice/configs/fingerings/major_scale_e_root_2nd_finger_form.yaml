@@ -1,0 +1,18 @@
+# Hand-authored TAB (the source of truth), written in the example key A
+# (root = low E fret 5). Convention: the form starts on the root — nothing
+# below the low root is played.
+# DRAFT — position form extrapolated from Fraser's spec ("2nd finger A maj
+# would be E[5,7], A[4,5,7]"). VERIFY the D/G/B/e strings before trusting.
+id: major-scale-e-root-2nd-finger-form
+scale: major_scale
+name: "Major Scale — 2nd Finger Form (E-root)"
+starting_finger: 2
+anchor: root_low_e
+example_key: A
+tab:
+  E: [5, 7]
+  A: [4, 5, 7]
+  D: [4, 6, 7]
+  G: [4, 6, 7]
+  B: [5, 7]
+  e: [4, 5]
