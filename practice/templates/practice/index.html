@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=17">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=18">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -15,7 +15,7 @@
          skewed forward for motion. Pure SVG text (system font stack, so
          overflow stays visible as a metrics safety net across platforms). -->
     <h1 class="app-title" title="Back to menu">
-      <svg class="logo" viewBox="0 0 236 40" width="236" height="40"
+      <svg class="logo" viewBox="0 0 236 40" width="283" height="48"
            role="img" aria-label="ScaleRunner">
         <defs>
           <!-- Glossy game-box faces: lighter upper half with a hard
@@ -43,9 +43,19 @@
                edge, aligned with the panel and game screen below. -->
           <text x="5" y="31" transform="translate(4 4)"
                 fill="#4b5568"><tspan>Scale</tspan><tspan fill="#a85f1a">Runner</tspan></text>
+          <!-- Hover layers: monochrome copies of the extrude and face
+               fade in over the two-tone ones — "Scale" is identical
+               over itself, so only "Runner" visibly fades to Scale's
+               scheme (gradient fills can't transition directly). -->
+          <text class="logo-hover-layer" x="5" y="31" aria-hidden="true"
+                transform="translate(4 4)" fill="#4b5568">ScaleRunner</text>
           <text x="5" y="31" stroke="#0c0f14" stroke-width="2.5"
                 stroke-linejoin="round" paint-order="stroke"
                 fill="url(#logo-white)"><tspan>Scale</tspan><tspan fill="url(#logo-orange)">Runner</tspan></text>
+          <text class="logo-hover-layer" x="5" y="31" stroke="#0c0f14"
+                stroke-width="2.5" stroke-linejoin="round"
+                paint-order="stroke" aria-hidden="true"
+                fill="url(#logo-white)"><tspan>Scale</tspan><tspan>Runner</tspan></text>
         </g>
       </svg>
     </h1>

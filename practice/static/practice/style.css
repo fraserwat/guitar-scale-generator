@@ -63,12 +63,16 @@ body {
 .app-title svg {
   overflow: visible;   /* system-font metrics vary; never clip the mark */
   filter: drop-shadow(0 0 8px rgba(255, 171, 74, 0.18)); /* resting glow */
-  transition: filter 120ms ease;
 }
 
-.app-title:hover svg {
-  filter: drop-shadow(0 0 10px rgba(255, 171, 74, 0.6));
+/* Hover: "Runner" fades to Scale's colour scheme (the monochrome
+   extrude + face copies in the svg fade in over the two-tone ones). */
+.logo-hover-layer {
+  opacity: 0;
+  transition: opacity 150ms ease;
 }
+
+.app-title:hover .logo-hover-layer { opacity: 1; }
 
 .hidden { display: none !important; }
 
@@ -85,12 +89,12 @@ body {
      game screen all share the same left edge. No per-element widths. */
 }
 
-/* The wordmark's resting glow, turned well down for the big surfaces
-   (config panel, neck diagram, TAB staff) — with a stronger border so
-   the boxes read clearly against the near-black page. */
+/* The big surfaces (config panel, neck diagram, TAB staff) get the
+   wordmark's own treatment: a pronounced border as the "outline", a
+   hard offset extrude behind the box, and the faint resting glow. */
 .panel, .neck, .tab {
   border: 2px solid #66738c;
-  box-shadow: 0 0 24px rgba(255, 171, 74, 0.08);
+  box-shadow: 6px 6px 0 #333d4d, 0 0 24px rgba(255, 171, 74, 0.08);
 }
 
 .field {
@@ -269,7 +273,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .seg-option, .exercise-box, .exercise-name,
-  .app-title svg { transition: none; }
+  .logo-hover-layer { transition: none; }
 }
 
 select {
