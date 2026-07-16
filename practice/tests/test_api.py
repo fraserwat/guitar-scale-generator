@@ -44,7 +44,7 @@ class IndexPageTests(TestCase):
         self.assertIn('role="img"', html)
         self.assertIn(">Scale</tspan>", html)
         self.assertIn(">Runner</tspan>", html)
-        self.assertIn('fill="#ffab4a"', html)
+        self.assertIn("#ffab4a", html)  # accent orange in the logo faces
         self.assertNotIn("Guitar Scale Practice", html)
 
     def test_index_has_v2_ui_hooks(self):
@@ -61,7 +61,7 @@ class IndexPageTests(TestCase):
         self.assertIn('id="tab"', html)
         self.assertNotIn("tab-stub", html)
         # Cache-busted static includes.
-        self.assertIn("style.css?v=16", html)
+        self.assertIn("style.css?v=17", html)
         self.assertIn("app.js?v=10", html)
 
     def test_app_js_has_retry_queue_hooks(self):

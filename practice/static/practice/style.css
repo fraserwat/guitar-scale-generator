@@ -29,12 +29,18 @@ body {
 .app {
   max-width: 720px;
   width: 100%;
-  /* Auto margins centre the column in the viewport when it fits and
-     collapse to 0 when it doesn't (normal scroll, nothing clipped) —
-     safer than justify-content: center on the flex body. */
-  margin: auto;
+  margin: 0 auto;
   padding: 1.25rem 1rem 2rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
+
+/* The visible screen centres in the space BELOW the title (auto margins:
+   centred when it fits, collapse to 0 for normal scroll when it doesn't).
+   The title itself stays pinned to the top, so it never shifts when
+   screens of different heights swap in. */
+.screen { margin: auto 0; }
 
 /* Short windows: narrow the column so the width-driven diagrams shrink
    proportionally and the game screen fits without scrolling. */
@@ -69,7 +75,6 @@ body {
 /* ---- Start screen ---- */
 .panel {
   background: var(--panel);
-  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 2rem;
   display: flex;
@@ -81,8 +86,10 @@ body {
 }
 
 /* The wordmark's resting glow, turned well down for the big surfaces
-   (config panel, neck diagram, TAB staff). */
+   (config panel, neck diagram, TAB staff) — with a stronger border so
+   the boxes read clearly against the near-black page. */
 .panel, .neck, .tab {
+  border: 2px solid #66738c;
   box-shadow: 0 0 24px rgba(255, 171, 74, 0.08);
 }
 
@@ -331,7 +338,6 @@ button:disabled { cursor: not-allowed; }
   height: auto;
   display: block;
   background: var(--panel);
-  border: 1px solid var(--line);
   border-radius: 10px;
   margin-bottom: 1rem;
 }

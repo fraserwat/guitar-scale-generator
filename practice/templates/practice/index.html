@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=16">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=17">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -17,15 +17,35 @@
     <h1 class="app-title" title="Back to menu">
       <svg class="logo" viewBox="0 0 236 40" width="236" height="40"
            role="img" aria-label="ScaleRunner">
+        <defs>
+          <!-- Glossy game-box faces: lighter upper half with a hard
+               "shine line" drop at the middle (userSpaceOnUse spans the
+               glyphs' vertical extent, y 9..31 at baseline y=31). -->
+          <linearGradient id="logo-white" gradientUnits="userSpaceOnUse"
+                          x1="0" y1="9" x2="0" y2="31">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="0.5" stop-color="#f8fafd"/>
+            <stop offset="0.52" stop-color="#c9d2e0"/>
+            <stop offset="1" stop-color="#e2e8f1"/>
+          </linearGradient>
+          <linearGradient id="logo-orange" gradientUnits="userSpaceOnUse"
+                          x1="0" y1="9" x2="0" y2="31">
+            <stop offset="0" stop-color="#ffd699"/>
+            <stop offset="0.5" stop-color="#ffc27a"/>
+            <stop offset="0.52" stop-color="#f5921e"/>
+            <stop offset="1" stop-color="#ffab4a"/>
+          </linearGradient>
+        </defs>
         <g transform="skewX(-8)"
            font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
            font-size="30" font-weight="800" letter-spacing="-0.5">
           <!-- x=5 compensates the skew so the S sits on the app column
                edge, aligned with the panel and game screen below. -->
-          <text x="5" y="31" transform="translate(3 3)"
+          <text x="5" y="31" transform="translate(4 4)"
                 fill="#4b5568"><tspan>Scale</tspan><tspan fill="#a85f1a">Runner</tspan></text>
-          <text x="5" y="31" stroke="#0c0f14" stroke-width="2"
-                paint-order="stroke" fill="#f4f7fb"><tspan>Scale</tspan><tspan fill="#ffab4a">Runner</tspan></text>
+          <text x="5" y="31" stroke="#0c0f14" stroke-width="2.5"
+                stroke-linejoin="round" paint-order="stroke"
+                fill="url(#logo-white)"><tspan>Scale</tspan><tspan fill="url(#logo-orange)">Runner</tspan></text>
         </g>
       </svg>
     </h1>
