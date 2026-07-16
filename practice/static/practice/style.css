@@ -130,7 +130,7 @@ body {
   border-radius: 999px;
   background: var(--bg);
   overflow: hidden;
-  box-shadow: 4px 4px 0 #333d4d; /* the surfaces' extrude */
+  box-shadow: 3px 3px 0 #333d4d; /* the buttons' extrude depth */
 }
 
 /* Real radios, visually hidden but kept adjacent for the + selectors
@@ -156,7 +156,7 @@ body {
 
 .seg-input:checked + .seg-option {
   /* Glossy face, matching the GBA buttons */
-  background: linear-gradient(180deg, #ffd699, #ffc27a 50%, #f5921e 50%, #ffab4a);
+  background: linear-gradient(180deg, #ffc98a, #ffb964 50%, #f9993a 50%, #ffab4a);
   color: #120b02;             /* dark bold text, matches .btn-primary */
   font-weight: 700;
 }
@@ -255,7 +255,7 @@ body {
 
 .exercise-option input:checked + .exercise-box {
   /* Mini GBA: glossy face, dark outline, tiny hard extrude */
-  background: linear-gradient(180deg, #ffd699, #ffc27a 50%, #f5921e 50%, #ffab4a);
+  background: linear-gradient(180deg, #ffc98a, #ffb964 50%, #f9993a 50%, #ffab4a);
   border-color: #0c0f14;
   box-shadow: 2px 2px 0 #a85f1a;
 }
@@ -319,7 +319,7 @@ button:disabled { cursor: not-allowed; }
   cursor: pointer;
 }
 
-.btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* GBA-treated buttons, matching the wordmark: glossy shine-line faces
    (hard mid-stop gradients), dark outline, hard extrude in a darker
@@ -334,21 +334,21 @@ button:disabled { cursor: not-allowed; }
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, #ffd699, #ffc27a 50%, #f5921e 50%, #ffab4a);
+  background: linear-gradient(180deg, #ffc98a, #ffb964 50%, #f9993a 50%, #ffab4a);
   color: #120b02;
-  box-shadow: 4px 4px 0 #a85f1a;
+  box-shadow: 3px 3px 0 #a85f1a;
 }
 
 .btn-correct:not(:disabled) {
-  background: linear-gradient(180deg, #a9efc7, #7ce3a9 50%, #2fb56a 50%, #4ed184);
+  background: linear-gradient(180deg, #8fe5b4, #6cdb9d 50%, #3cbf74 50%, #4ed184);
   color: #04210f;
-  box-shadow: 4px 4px 0 #1d7a45;
+  box-shadow: 3px 3px 0 #1d7a45;
 }
 
 .btn-incorrect:not(:disabled) {
-  background: linear-gradient(180deg, #ffc6c3, #ff9d99 50%, #f0524c 50%, #ff7a75);
+  background: linear-gradient(180deg, #ffa9a5, #ff8c87 50%, #f4635d 50%, #ff7a75);
   color: #2b0605;
-  box-shadow: 4px 4px 0 #a83833;
+  box-shadow: 3px 3px 0 #a83833;
 }
 
 .btn-primary:not(:disabled):hover,
@@ -356,17 +356,17 @@ button:disabled { cursor: not-allowed; }
 .btn-incorrect:not(:disabled):hover { filter: brightness(1.07); }
 
 .btn-primary:not(:disabled):active {
-  transform: translate(3px, 3px);
+  transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 #a85f1a;
 }
 
 .btn-correct:not(:disabled):active {
-  transform: translate(3px, 3px);
+  transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 #1d7a45;
 }
 
 .btn-incorrect:not(:disabled):active {
-  transform: translate(3px, 3px);
+  transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 #a83833;
 }
 
@@ -375,6 +375,7 @@ button:disabled { cursor: not-allowed; }
 #start-btn {
   position: relative;
   overflow: hidden;
+  padding-block: 0.85rem; /* a little taller than the standard button */
 }
 
 #start-btn::after {
@@ -404,8 +405,9 @@ button:disabled { cursor: not-allowed; }
 .btn-incorrect:disabled {
   opacity: 1;
   color: var(--muted);
-  border-color: var(--line);
+  border: 2px solid var(--line); /* same width as enabled — no shift */
   background: var(--panel);
+  box-shadow: 3px 3px 0 #333d4d; /* extrude stays, greyed */
 }
 
 /* ---- Exercise screen ---- */
