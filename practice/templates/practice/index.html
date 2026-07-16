@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=19">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=20">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -43,20 +43,19 @@
                edge, aligned with the panel and game screen below. -->
           <text x="5" y="31" transform="translate(4 4)"
                 fill="#4b5568"><tspan>Scale</tspan><tspan fill="#a85f1a">Runner</tspan></text>
-          <!-- Hover layers: colour-swapped copies of the extrude and
-               face fade in over the resting ones, so the two words
-               trade schemes — Scale goes orange, Runner goes white
-               (gradient fills can't transition directly). -->
+          <!-- Hover layers: all-orange copies of the extrude and face
+               fade in over the resting ones, so the whole wordmark
+               goes orange on hover ("Runner" is orange-over-orange;
+               gradient fills can't transition directly). -->
           <text class="logo-hover-layer" x="5" y="31" aria-hidden="true"
-                transform="translate(4 4)"
-                fill="#a85f1a"><tspan>Scale</tspan><tspan fill="#4b5568">Runner</tspan></text>
+                transform="translate(4 4)" fill="#a85f1a">ScaleRunner</text>
           <text x="5" y="31" stroke="#0c0f14" stroke-width="2.5"
                 stroke-linejoin="round" paint-order="stroke"
                 fill="url(#logo-white)"><tspan>Scale</tspan><tspan fill="url(#logo-orange)">Runner</tspan></text>
           <text class="logo-hover-layer" x="5" y="31" stroke="#0c0f14"
                 stroke-width="2.5" stroke-linejoin="round"
                 paint-order="stroke" aria-hidden="true"
-                fill="url(#logo-orange)"><tspan>Scale</tspan><tspan fill="url(#logo-white)">Runner</tspan></text>
+                fill="url(#logo-orange)">ScaleRunner</text>
         </g>
       </svg>
     </h1>
