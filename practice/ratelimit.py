@@ -1,4 +1,4 @@
-"""Minimal per-IP rate limiting for API endpoints (SECURITY_AUDIT.md M1).
+"""Minimal per-IP rate limiting for API endpoints.
 
 Fixed-window counter backed by Django's cache framework. With the default
 LocMemCache the counters are per-process — adequate for the current
@@ -59,7 +59,7 @@ def rate_limit(scope):
             if count > limit:
                 retry_after = WINDOW_SECONDS - int(time.time()) % WINDOW_SECONDS
                 response = JsonResponse(
-                    {"error": "Rate limit exceeded. Try again shortly."},
+                    {"errors": {"rate": "Rate limit exceeded. Try again shortly."}},
                     status=429,
                 )
                 response["Retry-After"] = str(retry_after)

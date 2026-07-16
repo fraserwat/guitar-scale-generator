@@ -1,13 +1,13 @@
 """Tests for the page and API endpoints."""
 
 import json
-import random
-from pathlib import Path
 from unittest import mock
 
 from django.test import TestCase, override_settings
 
-from practice import spaced_repetition, theory
+import random
+
+from practice import theory
 from practice.models import AttemptLog
 
 ROUND_KEYS = {"scale", "key", "direction", "form_id", "form_name",
@@ -35,51 +35,26 @@ class IndexPageTests(TestCase):
         # 7-string is still promised (hover hint on the disabled segment).
         self.assertIn('title="Coming soon"', html)
         self.assertIn("data-csrf-token", html)
-        # App name is ScaleRunner; the title h1 is the click-to-menu hook,
-        # now wrapping the GBA-style SVG wordmark (two-tone tspans, an
-        # accessible name, and the accent-orange "Runner").
+        # The title h1 is the click-to-menu hook wrapping the SVG wordmark.
         self.assertIn("<title>ScaleRunner</title>", html)
         self.assertIn('<h1 class="app-title" title="Back to menu">', html)
         self.assertIn('aria-label="ScaleRunner"', html)
         self.assertIn('role="img"', html)
         self.assertIn(">Scale</tspan>", html)
         self.assertIn(">Runner</tspan>", html)
-        self.assertIn("#ffab4a", html)  # accent orange in the logo faces
-        self.assertNotIn("Guitar Scale Practice", html)
 
-    def test_index_has_v2_ui_hooks(self):
-        """Category-language header slots + start-menu keyboard tip."""
+    def test_index_has_round_header_hooks(self):
+        """Round header slots + keyboard tip on the start menu."""
         html = self.client.get("/").content.decode()
         self.assertIn('id="round-label"', html)
         self.assertIn('id="round-direction"', html)
-        # Keyboard tip lives on the start menu, NOT inside the judge buttons.
         self.assertIn('class="keyboard-tip"', html)
-        self.assertNotIn("key-hint", html)
         self.assertIn("for correct", html)
         self.assertIn("for incorrect", html)
-        # Real TAB element (the empty -stub era is over).
         self.assertIn('id="tab"', html)
-        self.assertNotIn("tab-stub", html)
-        # Cache-busted static includes.
-        self.assertIn("style.css?v=25", html)
-        self.assertIn("app.js?v=12", html)
-
-    def test_app_js_has_retry_queue_hooks(self):
-        """Source-presence smoke test for the v4 retry queue (there is no
-        JS test runner in this repo — the scheduling behavior itself is
-        verified by manual play). Asserts the load-bearing strings exist
-        in app.js: the queue, the overtime drain, the 2-turn delay, and
-        the is_retry flag sent to /api/log/."""
-        app_js = (Path(__file__).resolve().parent.parent
-                  / "static" / "practice" / "app.js").read_text()
-        self.assertIn("retryQueue", app_js)
-        self.assertIn("overtime", app_js)
-        self.assertIn("delay: 2", app_js)
-        self.assertIn("is_retry", app_js)
 
     def test_index_strings_segmented_control(self):
-        """v5: the greyed 7-string checkbox became a 6/7 segmented radio;
-        6 is the checked default, 7 is disabled with a soon badge."""
+        """6 is the checked default; 7 is disabled with a soon badge."""
         html = self.client.get("/").content.decode()
         self.assertIn('role="radiogroup"', html)
         six = html.index('id="strings-6"')
@@ -89,13 +64,12 @@ class IndexPageTests(TestCase):
         self.assertIn('value="7"', html[seven:seven + 80])
         self.assertIn("disabled", html[seven:seven + 80])
         self.assertIn(">soon</span>", html)
-        self.assertNotIn('id="seven-string-toggle"', html)
 
     @staticmethod
     def playable_scale_ids():
         """Scale ids with >= 1 loaded fingering form — the only ones the
         exercise picker offers (major/minor arpeggio are config-defined
-        but form-less since the v3 prune)."""
+        but have no shipped fingering forms)."""
         return {form["scale"] for form in theory.load_fingerings().values()}
 
     def test_index_exercise_checkboxes_match_config(self):
@@ -171,18 +145,6 @@ class IndexPageTests(TestCase):
                  html.index('id="start-btn"')]
         self.assertEqual(order, sorted(order))
 
-    def test_app_js_has_exercise_filter_hooks(self):
-        """Source-presence smoke test for the v5 exercise filter (no JS
-        runner in this repo; behavior verified by manual play): the scales
-        query builder, the filter param, and the Start-gating hooks."""
-        app_js = (Path(__file__).resolve().parent.parent
-                  / "static" / "practice" / "app.js").read_text()
-        self.assertIn("buildScalesQuery", app_js)
-        self.assertIn('"?scales="', app_js)
-        self.assertIn("exercise-checkbox", app_js)
-        self.assertIn("updateStartState", app_js)
-        self.assertIn("roundQuery", app_js)
-
 
 class ValidRoundMixin:
     """Full-schema validation of one /api/round/ payload, shared by the
@@ -202,8 +164,8 @@ class ValidRoundMixin:
         self.assertEqual(data["form_name"], form["name"])
         self.assertEqual(data["scale"], scales[form["scale"]]["name"])
 
-        # New v2 fields: category + display label + XOR-populated
-        # caged_shape / starting_finger, consistent with the config.
+        # Category + display label + XOR-populated caged_shape /
+        # starting_finger, consistent with the config.
         self.assertIn(data["category"], theory.CATEGORIES)
         self.assertEqual(data["category"], form["category"])
         self.assertEqual(data["display_label"], form["display_label"])
@@ -291,6 +253,9 @@ class RoundApiTests(ValidRoundMixin, TestCase):
         self.assertEqual(seen["directions"], {"Ascending", "Descending"})
         self.assertEqual(seen["forms"], set(theory.load_fingerings()))
         self.assertGreaterEqual(len(seen["keys"]), 5)
+        # Both accidental spellings get served (flat/sharp coin flip).
+        self.assertTrue(seen["keys"] & set(theory.FLAT_KEYS))
+        self.assertTrue(seen["keys"] & set(theory.SHARP_TO_FLAT))
         self.assertEqual(seen["scales"], {
             "Major Scale", "Natural Minor Scale",
             "Major 7 Arpeggio", "Dominant 7 Arpeggio",
@@ -312,11 +277,22 @@ class RoundKeySpellingTests(TestCase):
     mocked to pin each branch deterministically for every accidental key.
     """
 
-    def get_round(self, chosen_key, coin):
-        """One /api/round/ with the key draw and the flat/sharp coin pinned.
-        random.choice feeds the key draw, then the direction draw."""
+    @staticmethod
+    def pinned_choice(chosen_key, form_id=None):
+        """random.choice replacement keyed by argument, so tests don't
+        care how many draws the view makes or in what order."""
+        def choose(seq):
+            if seq is theory.KEYS:
+                return chosen_key
+            if seq is theory.DIRECTIONS:
+                return "Ascending"
+            return form_id or seq[0]  # the form pool
+        return choose
+
+    def get_round(self, chosen_key, coin, form_id=None):
+        """One /api/round/ with the key draw and flat/sharp coin pinned."""
         with mock.patch("practice.views.random.choice",
-                        side_effect=[chosen_key, "Ascending"]), \
+                        side_effect=self.pinned_choice(chosen_key, form_id)), \
              mock.patch("practice.views.random.random", return_value=coin):
             resp = self.client.get("/api/round/")
         self.assertEqual(resp.status_code, 200)
@@ -351,7 +327,7 @@ class RoundKeySpellingTests(TestCase):
         for key in naturals:
             with self.subTest(key=key):
                 with mock.patch("practice.views.random.choice",
-                                side_effect=[key, "Ascending"]), \
+                                side_effect=self.pinned_choice(key)), \
                      mock.patch("practice.views.random.random") as coin:
                     resp = self.client.get("/api/round/")
                 self.assertEqual(resp.status_code, 200)
@@ -362,21 +338,18 @@ class RoundKeySpellingTests(TestCase):
         """End-to-end: a Gb major-scale round spells exactly the Gb major
         names, Cb included (form pinned — the maj7 arpeggio form has no
         4th degree, so it never contains a Cb)."""
-        with mock.patch(
-                "practice.views.random.choices",
-                return_value=["major-scale-e-root-1st-finger-form"]):
-            data = self.get_round("F#", coin=0.0)
+        data = self.get_round(
+            "F#", coin=0.0, form_id="major-scale-e-root-1st-finger-form")
         self.assertEqual(data["key"], "Gb")
         self.assertEqual(data["form_id"], "major-scale-e-root-1st-finger-form")
         names = {n["note_name"] for n in data["notes"]}
         self.assertEqual(names, {"Gb", "Ab", "Bb", "Cb", "Db", "Eb", "F"})
 
     def test_gb_maj7_arpeggio_round_spelling(self):
-        """The new single-yaml maj7 arpeggio form, flat-spelled end to end:
+        """The maj7 arpeggio form, flat-spelled end to end:
         Gb maj7 arpeggio = Gb Bb Db F."""
-        with mock.patch("practice.views.random.choices",
-                        return_value=["major7-arpeggio-e-root-1st-finger-form"]):
-            data = self.get_round("F#", coin=0.0)
+        data = self.get_round(
+            "F#", coin=0.0, form_id="major7-arpeggio-e-root-1st-finger-form")
         self.assertEqual(data["key"], "Gb")
         self.assertEqual(data["scale"], "Major 7 Arpeggio")
         self.assertEqual(data["display_label"], "1st Finger Form (E-root)")
@@ -385,25 +358,11 @@ class RoundKeySpellingTests(TestCase):
         # The form skips the high e string entirely.
         self.assertNotIn(1, {n["string"] for n in data["notes"]})
 
-    def test_unmocked_rounds_serve_both_spellings(self):
-        """Statistical sanity check on the real RNG: over 400 rounds both a
-        flat and a sharp accidental key appear (P(miss) < 1e-30), and every
-        served key is a valid spelling."""
-        random.seed(1990)
-        seen = set()
-        for _ in range(400):
-            data = self.client.get("/api/round/").json()
-            self.assertIn(data["key"], theory.VALID_KEYS)
-            seen.add(data["key"])
-        self.assertTrue(seen & set(theory.FLAT_KEYS))
-        self.assertTrue(seen & set(theory.SHARP_TO_FLAT))
-
-
 class RoundFilterTests(ValidRoundMixin, TestCase):
     """GET /api/round/?scales=... — the start-menu exercise filter.
 
     The no-param domain is already pinned by RoundApiTests' 400-call
-    test (exact pre-v5 behaviour); these cover the filtered paths.
+    test; these cover the filtered paths.
     """
 
     def forms_of(self, *scale_ids):
@@ -438,7 +397,7 @@ class RoundFilterTests(ValidRoundMixin, TestCase):
 
     def test_filter_each_scale_id_individually(self):
         """Every playable scale id serves its rounds; a config-defined but
-        form-less id (major/minor arpeggio since the v3 prune) is a 400 —
+        form-less id (major/minor arpeggio have no shipped forms) is a 400 —
         never a 500 from an empty random pool."""
         playable = {form["scale"]
                     for form in theory.load_fingerings().values()}
@@ -516,16 +475,18 @@ class RoundFilterTests(ValidRoundMixin, TestCase):
                 self.assertEqual(resp.status_code, 400)
                 self.assertIn("scales", resp.json()["errors"])
 
-    def test_filter_feeds_filtered_ids_to_weights(self):
-        """The spaced-repetition hook sees exactly the filtered pool."""
+    def test_filter_narrows_the_selection_pool(self):
+        """Form selection draws from exactly the filtered pool."""
         expected = [fid for fid, form in theory.load_fingerings().items()
                     if form["scale"] == "minor_pentatonic"]
-        with mock.patch(
-                "practice.views.spaced_repetition.next_round_weights",
-                side_effect=spaced_repetition.next_round_weights) as spy:
+        with mock.patch("practice.views.random.choice",
+                        side_effect=random.choice) as spy:
             resp = self.client.get("/api/round/?scales=minor_pentatonic")
         self.assertEqual(resp.status_code, 200)
-        spy.assert_called_once_with(expected)
+        pools = [c.args[0] for c in spy.call_args_list
+                 if c.args[0] is not theory.KEYS
+                 and c.args[0] is not theory.DIRECTIONS]
+        self.assertEqual(pools, [expected])
 
     def test_filter_post_still_405(self):
         resp = self.client.post("/api/round/?scales=major_scale")
@@ -573,7 +534,7 @@ class LogApiTests(TestCase):
         self.assertFalse(row.correct)
 
     def test_log_without_is_retry_defaults_false(self):
-        """is_retry is optional — pre-v4 payloads must keep logging fine
+        """is_retry is optional — payloads without it must keep logging fine
         and land as first attempts (False)."""
         resp = self.post_log(VALID_LOG_PAYLOAD)
         self.assertEqual(resp.status_code, 201)

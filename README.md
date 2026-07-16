@@ -5,13 +5,16 @@ Wanting a more efficient way of keeping up with scales, not forgetting them, but
 
 - [x] Real TAB rendering.
 - [x] Validate with Major Scale forms.
-- [x] Reset DJANGO_SECRET_JEY in .env.
+- [x] Reset DJANGO_SECRET_KEY in .env.
 - [x] Separate correct & incorrect in results (incorrect first).
 - [x] Flat/sharp spelling.
-- [ ] Descending / Ascending in Orange pop to make it easier to see.
-- [ ] Select scale types from practice menu.
-- [ ] Repeat in Queue+3 if incorrect.
+- [x] Descending / Ascending in Orange pop to make it easier to see.
+- [x] Select scale types from practice menu.
+- [x] Repeat two turns later if incorrect.
 - [ ] 7-string scale forms.
+
+Nice-to-haves (no code scaffolding for these — by design):
+
 - [ ] Users/auth.
 - [ ] Spaced repetition algorithm.
 

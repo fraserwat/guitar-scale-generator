@@ -2,14 +2,7 @@ from django.db import models
 
 
 class AttemptLog(models.Model):
-    """One logged attempt at a practice round.
-
-    TODO(spaced repetition): this log will feed the spaced-repetition
-    algorithm in practice/spaced_repetition.py (weighting future rounds by
-    past incorrect answers).
-    TODO(auth): tie rows to user accounts once authentication is added
-    (add a ForeignKey to the user model).
-    """
+    """One logged attempt at a practice round."""
 
     form_id = models.CharField(max_length=64)  # fingering form config id
     scale = models.CharField(max_length=64)

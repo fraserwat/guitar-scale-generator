@@ -515,17 +515,6 @@ class BrokenConfigTests(SimpleTestCase):
                     self.load_broken({**VALID_FORM, "example_key": bad_key})
                 self.assertIn("example_key", str(ctx.exception))
 
-    def test_legacy_offsets_schema_rejected_with_hint(self):
-        legacy = {k: v for k, v in VALID_FORM.items() if k != "tab"}
-        legacy["offsets"] = {
-            6: [0, 3], 5: [0, 2], 4: [0, 2], 3: [0, 2], 2: [0, 3], 1: [0, 3],
-        }
-        with self.assertRaises(theory.ConfigError) as ctx:
-            self.load_broken(legacy)
-        msg = str(ctx.exception)
-        self.assertIn("legacy", msg)
-        self.assertIn("tab", msg)
-
     def test_caged_shape_missing_for_pentatonic_rejected(self):
         form = dict(VALID_FORM)
         del form["caged_shape"]

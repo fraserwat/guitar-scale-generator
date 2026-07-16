@@ -220,15 +220,6 @@ def spell_scale(key: str, intervals: list[int]) -> dict[int, str]:
     return {(root_pc + i) % 12: spell_interval(key, i) for i in intervals}
 
 
-# =============================================================================
-# TODO(anchor strategies): future anchor strategies are one new entry in
-# ANCHOR_ROOT_STRINGS (selected per-fingering via the `anchor` field of the
-# fingering config), e.g.:
-#   - 3-notes-per-string positions
-#   - fully randomised window positions
-# Each strategy maps (key) -> anchor fret; everything downstream (offset
-# resolution, window computation, rendering) is strategy-agnostic.
-# =============================================================================
 def anchor_fret(key: str, anchor: str = "root_low_e") -> int:
     """Return the absolute anchor fret for a key under an anchor strategy.
 

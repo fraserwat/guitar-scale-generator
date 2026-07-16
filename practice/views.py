@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 
-from . import spaced_repetition, theory
+from . import theory
 from .models import AttemptLog
 
 
@@ -18,10 +18,9 @@ def _exercise_groups():
     group; checkbox values are the raw scale ids (what /api/round/?scales=
     accepts), so a new scale in scales.yaml appears here automatically.
 
-    Only scales with at least one loaded fingering form are offered:
-    scales.yaml still defines major/minor arpeggio, but their forms were
-    pruned in v3 (PLAN.md deferred: restore the full 41-form set) — a
-    checkbox that can never serve a round would be a lie.
+    Only scales with at least one loaded fingering form are offered
+    (scales.yaml defines major/minor arpeggio, but no fingerings ship
+    for them) — a checkbox that can never serve a round would be a lie.
     """
     playable = {form["scale"] for form in theory.load_fingerings().values()}
     groups = [{"label": "Scales", "items": []},
@@ -47,22 +46,19 @@ def index(request):
 def api_round(request):
     """Return a randomised practice round as JSON.
 
-    A round = (fingering form, key, direction). The form is chosen via the
-    spaced-repetition weights; key and direction are uniform random.
+    A round = (fingering form, key, direction), each drawn uniformly at
+    random (the form pool optionally narrowed by ?scales=).
     """
     fingerings = theory.load_fingerings()
     scales = theory.load_scales()
 
     form_ids = list(fingerings)
     # Optional exercise filter: ?scales=major_pentatonic,minor7_arpeggio
-    # narrows the pool to forms of those scale ids. Absent -> all forms
-    # (exact pre-v5 behaviour). Empty tokens are dropped (a trailing comma
-    # is harmless); an effectively empty, unknown-id, or zero-form filter
-    # is a 400 — never a 500. (A valid id CAN have zero loaded forms:
-    # major/minor arpeggio are defined in scales.yaml but their forms were
-    # pruned in v3, which is also why _exercise_groups skips them.) Kept
-    # BEFORE all random draws: the key-spelling tests pin the exact
-    # random.* call sequence.
+    # narrows the pool to forms of those scale ids; absent means all forms.
+    # Empty tokens are dropped (a trailing comma is harmless); an
+    # effectively empty, unknown-id, or zero-form filter is a 400 — never
+    # a 500. (A valid id can have zero loaded forms — major/minor arpeggio
+    # ship no fingerings — which is also why _exercise_groups skips them.)
     scales_param = request.GET.get("scales")
     if scales_param is not None:
         wanted = {s for s in scales_param.split(",") if s}
@@ -83,11 +79,7 @@ def api_round(request):
                 "scales": "No playable forms for scale id(s): "
                           f"{sorted(wanted)}.",
             }}, status=400)
-    # TODO(spaced repetition): next_round_weights() is a stub returning
-    # uniform weights, so this is currently plain uniform random selection.
-    # Later it will bias towards forms/keys the player keeps getting wrong.
-    weights = spaced_repetition.next_round_weights(form_ids)
-    form_id = random.choices(form_ids, weights=weights, k=1)[0]
+    form_id = random.choice(form_ids)
     key = random.choice(theory.KEYS)
     # Accidental (black-key) roots: 50% chance to present the flat enharmonic
     # spelling instead (e.g. Gb rather than F#). Natural keys are unchanged —
@@ -106,9 +98,10 @@ def api_round(request):
         "form_name": form["name"],
         "category": form["category"],
         "display_label": form["display_label"],
-        "caged_shape": form["caged_shape"],          # str, or None for
-                                                     # scale/arpeggio forms
-        "starting_finger": form["starting_finger"],  # int, or None for CAGED
+        # caged_shape and starting_finger are XOR-populated by category:
+        # pentatonic forms carry a shape, scale/arpeggio forms a finger.
+        "caged_shape": form["caged_shape"],
+        "starting_finger": form["starting_finger"],
         "window_start": window_start,
         "notes": notes,
     })
@@ -116,18 +109,15 @@ def api_round(request):
 
 @require_POST
 def api_log(request):
-    """Log the result of one round — STUB endpoint.
-
-    TODO(spaced repetition): these rows (keyed by form_id) will feed the
-    algorithm in practice/spaced_repetition.py.
-    TODO(auth): attach the logged-in user once accounts exist.
-    """
+    """Log the result of one round."""
     try:
         payload = json.loads(request.body)
     except (json.JSONDecodeError, UnicodeDecodeError):
-        return JsonResponse({"error": "Invalid JSON body."}, status=400)
+        return JsonResponse({"errors": {"body": "Invalid JSON body."}},
+                            status=400)
     if not isinstance(payload, dict):
-        return JsonResponse({"error": "JSON body must be an object."}, status=400)
+        return JsonResponse({"errors": {"body": "JSON body must be an object."}},
+                            status=400)
 
     valid_forms = theory.load_fingerings()
     valid_scales = theory.scale_names()

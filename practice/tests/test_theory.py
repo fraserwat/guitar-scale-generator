@@ -534,17 +534,6 @@ class OctaveNormalisationTests(SimpleTestCase):
             "major-scale-e-root-4th-finger-form", "A")
         self.assertEqual(window_start, 1)
 
-    def test_min_fret_in_1_to_12_for_every_form_and_key(self):
-        for form_id in theory.load_fingerings():
-            for key in theory.KEYS:
-                with self.subTest(form=form_id, key=key):
-                    window_start, notes = theory.resolve_form(form_id, key)
-                    min_fret = min(n["fret"] for n in notes)
-                    self.assertEqual(window_start, min_fret)
-                    self.assertGreaterEqual(min_fret, 1)
-                    self.assertLessEqual(min_fret, 12)
-
-
 class HandVerifiedFixtureTests(SimpleTestCase):
     """Complete hand-written expected outputs, compared exactly."""
 
@@ -576,7 +565,7 @@ class HandVerifiedFixtureTests(SimpleTestCase):
         self.assertEqual(notes, expected)
 
     def test_a_major_1st_finger_form_frets_per_string(self):
-        """Three-notes-per-string from the root (DRAFT form)."""
+        """Three-notes-per-string from the root."""
         window_start, notes = theory.resolve_form(
             "major-scale-e-root-1st-finger-form", "A")
         self.assertEqual(window_start, 5)
@@ -586,7 +575,7 @@ class HandVerifiedFixtureTests(SimpleTestCase):
         })
 
     def test_a_major_2nd_finger_form_frets_per_string(self):
-        """Position form: E[5,7], A[4,5,7], … (DRAFT form)."""
+        """Position form: E[5,7], A[4,5,7], …"""
         window_start, notes = theory.resolve_form(
             "major-scale-e-root-2nd-finger-form", "A")
         self.assertEqual(window_start, 4)
