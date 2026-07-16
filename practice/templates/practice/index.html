@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=18">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=19">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -61,7 +61,7 @@
     </h1>
 
     <!-- ============ Start screen ============ -->
-    <section id="start-screen" class="screen">
+    <section id="start-screen" class="screen flow">
       <div class="panel">
         <label class="field">
           <span class="field-label">Timer length</span>
@@ -124,7 +124,7 @@
     </section>
 
     <!-- ============ Exercise screen ============ -->
-    <section id="exercise-screen" class="screen hidden">
+    <section id="exercise-screen" class="screen flow hidden">
       <div class="exercise-top">
         <div id="timer" class="timer">5:00</div>
         <div class="round-header">
@@ -164,7 +164,7 @@
     <!-- Summary card first, then rounds grouped by outcome ("Correct" /
          "Needs work"). app.js fills the counts + lists and hides any empty
          group (and the whole summary card when no rounds were played). -->
-    <section id="results-screen" class="screen hidden">
+    <section id="results-screen" class="screen flow hidden">
       <h2 class="results-heading">Session results</h2>
 
       <div id="results-summary" class="results-summary">

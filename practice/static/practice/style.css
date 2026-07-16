@@ -76,6 +76,15 @@ body {
 
 .hidden { display: none !important; }
 
+/* Vertical rhythm (https://piccalil.li/blog/flow-utility/): siblings in
+   a .flow container space themselves off one rule instead of ad-hoc
+   per-element margins; children override --flow-space where the rhythm
+   genuinely differs (e.g. after an extruded box). The zeroing rule
+   replaces UA/per-element block margins, so children must not set
+   their own (they'd win the cascade tie by coming later in the file). */
+.flow > * { margin-block: 0; }
+.flow > * + * { margin-block-start: var(--flow-space, 1rem); }
+
 /* ---- Start screen ---- */
 .panel {
   background: var(--panel);
@@ -318,7 +327,6 @@ button:disabled { cursor: not-allowed; }
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
 }
 
 .timer {
@@ -343,8 +351,11 @@ button:disabled { cursor: not-allowed; }
   display: block;
   background: var(--panel);
   border-radius: 10px;
-  margin-bottom: 1rem;
 }
+
+/* Extra rhythm after the extruded boxes (the 6px extrude eats into the
+   perceived gap below them). */
+.tab, .hint { --flow-space: 1.5rem; }
 
 /* Root-note pips: app.js tags roots with class="root"; the CSS fill wins
    over the inline presentation attributes on the other notes. */
@@ -355,7 +366,7 @@ button:disabled { cursor: not-allowed; }
 }
 .tab .root { fill: var(--accent); font-weight: 700; }
 
-.hint { color: var(--muted); font-size: 0.95rem; margin: 0.75rem 0; }
+.hint { color: var(--muted); font-size: 0.95rem; }
 kbd {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -365,12 +376,12 @@ kbd {
   color: var(--text);
 }
 
-.judge-buttons { display: flex; gap: 1.25rem; margin-top: 1.25rem; }
+.judge-buttons { display: flex; gap: 1.25rem; }
 
 /* Understated keyboard-shorthand tip on the start menu (kept off the
    game-loop UI). */
 .keyboard-tip {
-  margin: 1.5rem 0 0; /* spans the app column, like the panel above it */
+  --flow-space: 1.5rem; /* clears the panel's extrude */
   font-size: 0.8rem;
   color: var(--muted);
 }
@@ -380,10 +391,14 @@ kbd {
    Hierarchy: summary card (score + progress bar) first, then rounds grouped
    by outcome. Group tint carries the correct/incorrect meaning, so rows stay
    free of per-item ✓/✗ clutter. */
+/* Results rhythm is airier than the game screen's; the summary card
+   stays snug under its heading. */
+#results-screen { --flow-space: 1.75rem; }
+.results-summary { --flow-space: 1rem; }
+
 .results-heading {
   font-size: 1.25rem;
   font-weight: 600;
-  margin: 0 0 1rem;
 }
 
 .results-summary {
@@ -391,7 +406,6 @@ kbd {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 1.25rem 1.5rem;
-  margin-bottom: 1.75rem;
 }
 
 .results-summary-row {
@@ -441,11 +455,7 @@ kbd {
 
 .results-empty {
   color: var(--muted);
-  margin: 0 0 1.75rem;
 }
-
-/* Outcome groups */
-.results-group { margin-bottom: 1.75rem; }
 
 .results-group-title {
   display: flex;
@@ -514,4 +524,3 @@ kbd {
 .result-meta { font-size: 0.85rem; color: var(--muted); }
 .result-direction { color: var(--accent); font-style: italic; }
 
-#again-btn { margin-top: 0.25rem; }
