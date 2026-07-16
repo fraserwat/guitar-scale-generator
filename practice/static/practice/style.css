@@ -11,6 +11,17 @@
   --note: #eef2f8;     /* plain scale notes */
   --green: #4ed184;
   --red: #ff7a75;
+
+  /* GBA control faces + extrudes (the wordmark's glossy shine-line
+     treatment as CSS gradients; shared by buttons, the segmented
+     control, and the exercise checkboxes). */
+  --gloss-orange: linear-gradient(180deg, #ffc98a, #ffb964 50%, #f9993a 50%, #ffab4a);
+  --gloss-green: linear-gradient(180deg, #8fe5b4, #6cdb9d 50%, #3cbf74 50%, #4ed184);
+  --gloss-red: linear-gradient(180deg, #ffa9a5, #ff8c87 50%, #f4635d 50%, #ff7a75);
+  --extrude-orange: #a85f1a;
+  --extrude-green: #1d7a45;
+  --extrude-red: #a83833;
+  --extrude-grey: #333d4d;
 }
 
 * { box-sizing: border-box; }
@@ -107,30 +118,27 @@ body {
    hard offset extrude behind the box, and the faint resting glow. */
 .panel, .neck, .tab {
   border: 2px solid #66738c;
-  box-shadow: 6px 6px 0 #333d4d, 0 0 24px rgba(255, 171, 74, 0.08);
+  box-shadow: 6px 6px 0 var(--extrude-grey), 0 0 24px rgba(255, 171, 74, 0.08);
 }
 
+/* Children stretch to the field's width (the flex default) — labels are
+   inline text, so stretching is harmless there. */
 .field {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 0.5rem;
 }
-
-.field > select { align-self: stretch; }
 
 .field-label { font-size: 0.9rem; color: var(--muted); }
 
 /* ---- Strings segmented control ---- */
-.field > .seg-control { align-self: stretch; } /* .field left-aligns children */
-
 .seg-control {
   display: flex;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--bg);
   overflow: hidden;
-  box-shadow: 3px 3px 0 #333d4d; /* the buttons' extrude depth */
+  box-shadow: 3px 3px 0 var(--extrude-grey); /* the buttons' extrude depth */
 }
 
 /* Real radios, visually hidden but kept adjacent for the + selectors
@@ -155,8 +163,7 @@ body {
 }
 
 .seg-input:checked + .seg-option {
-  /* Glossy face, matching the GBA buttons */
-  background: linear-gradient(180deg, #ffc98a, #ffb964 50%, #f9993a 50%, #ffab4a);
+  background: var(--gloss-orange); /* matches the GBA buttons */
   color: #120b02;             /* dark bold text, matches .btn-primary */
   font-weight: 700;
 }
@@ -196,8 +203,6 @@ body {
   color: var(--muted);
   margin: 0 0 0.35rem;
 }
-
-.field > .exercise-groups { align-self: stretch; }
 
 .exercise-groups {
   display: grid;
@@ -255,9 +260,9 @@ body {
 
 .exercise-option input:checked + .exercise-box {
   /* Mini GBA: glossy face, dark outline, tiny hard extrude */
-  background: linear-gradient(180deg, #ffc98a, #ffb964 50%, #f9993a 50%, #ffab4a);
+  background: var(--gloss-orange);
   border-color: #0c0f14;
-  box-shadow: 2px 2px 0 #a85f1a;
+  box-shadow: 2px 2px 0 var(--extrude-orange);
 }
 
 .exercise-option input:checked + .exercise-box::after { opacity: 1; }
@@ -309,65 +314,62 @@ select {
 button:not(:disabled) { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 
+/* GBA-treated buttons, matching the wordmark: glossy shine-line faces,
+   dark outline, hard extrude in a darker shade of each button's own
+   colour; :active presses the button down into its extrude.
+
+   Structure lives HERE and only here — variants and states swap
+   colours (background / text / border-colour / --extrude) and must
+   never touch geometry (border width, weight, padding, offsets), so a
+   state flip can never change a button's size. */
 .btn {
   font-size: 1rem;
+  font-weight: 700;
   padding: 0.6rem 1.4rem;
   border-radius: 8px;
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   background: var(--panel);
   color: var(--text);
-  cursor: pointer;
+  --extrude: var(--extrude-grey);
+  box-shadow: 3px 3px 0 var(--extrude);
 }
 
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:disabled { opacity: 0.45; }
 
-/* GBA-treated buttons, matching the wordmark: glossy shine-line faces
-   (hard mid-stop gradients), dark outline, hard extrude in a darker
-   shade of each button's own colour. Dark text stays well above WCAG
-   AA on every face. :active presses the button down into its extrude —
-   the classic tactile game-button push. */
-.btn-primary,
-.btn-correct:not(:disabled),
-.btn-incorrect:not(:disabled) {
-  border: 2px solid #0c0f14;
-  font-weight: 700;
+.btn:not(:disabled):hover { filter: brightness(1.07); }
+
+.btn:not(:disabled):active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--extrude);
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, #ffc98a, #ffb964 50%, #f9993a 50%, #ffab4a);
+  background: var(--gloss-orange);
+  border-color: #0c0f14;
   color: #120b02;
-  box-shadow: 3px 3px 0 #a85f1a;
+  --extrude: var(--extrude-orange);
 }
 
 .btn-correct:not(:disabled) {
-  background: linear-gradient(180deg, #8fe5b4, #6cdb9d 50%, #3cbf74 50%, #4ed184);
+  background: var(--gloss-green);
+  border-color: #0c0f14;
   color: #04210f;
-  box-shadow: 3px 3px 0 #1d7a45;
+  --extrude: var(--extrude-green);
 }
 
 .btn-incorrect:not(:disabled) {
-  background: linear-gradient(180deg, #ffa9a5, #ff8c87 50%, #f4635d 50%, #ff7a75);
+  background: var(--gloss-red);
+  border-color: #0c0f14;
   color: #2b0605;
-  box-shadow: 3px 3px 0 #a83833;
+  --extrude: var(--extrude-red);
 }
 
-.btn-primary:not(:disabled):hover,
-.btn-correct:not(:disabled):hover,
-.btn-incorrect:not(:disabled):hover { filter: brightness(1.07); }
-
-.btn-primary:not(:disabled):active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 #a85f1a;
-}
-
-.btn-correct:not(:disabled):active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 #1d7a45;
-}
-
-.btn-incorrect:not(:disabled):active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 #a83833;
+/* Pre-reveal judge buttons: base grey structure, fully legible (the
+   generic 45% disabled fade vanished on this bg). Colours only. */
+.btn-correct:disabled,
+.btn-incorrect:disabled {
+  opacity: 1;
+  color: var(--muted);
 }
 
 /* JRPG shine sweep on the hero button only (the judge buttons are
@@ -397,17 +399,6 @@ button:disabled { cursor: not-allowed; }
 @keyframes btn-shine {
   from { transform: skewX(-14deg) translateX(0); }
   to { transform: skewX(-14deg) translateX(780px); }
-}
-
-/* Pre-reveal judge buttons: still grey/inactive, but clearly legible —
-   the generic 45%-opacity disabled look all but vanished on this bg. */
-.btn-correct:disabled,
-.btn-incorrect:disabled {
-  opacity: 1;
-  color: var(--muted);
-  border: 2px solid var(--line); /* same width as enabled — no shift */
-  background: var(--panel);
-  box-shadow: 3px 3px 0 #333d4d; /* extrude stays, greyed */
 }
 
 /* ---- Exercise screen ---- */

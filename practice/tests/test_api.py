@@ -61,7 +61,7 @@ class IndexPageTests(TestCase):
         self.assertIn('id="tab"', html)
         self.assertNotIn("tab-stub", html)
         # Cache-busted static includes.
-        self.assertIn("style.css?v=23", html)
+        self.assertIn("style.css?v=24", html)
         self.assertIn("app.js?v=11", html)
 
     def test_app_js_has_retry_queue_hooks(self):
