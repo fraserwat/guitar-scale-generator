@@ -65,14 +65,18 @@ body {
   filter: drop-shadow(0 0 8px rgba(255, 171, 74, 0.18)); /* resting glow */
 }
 
-/* Hover: "Runner" fades to Scale's colour scheme (the monochrome
-   extrude + face copies in the svg fade in over the two-tone ones). */
-.logo-hover-layer {
-  opacity: 0;
-  transition: opacity 150ms ease;
+/* Hover: a JRPG-style shine sweeps across the lettering once. The band
+   rests off-canvas left (rect x=-60, clipped anyway) and the animation
+   carries it past the wordmark's right edge, then snaps back off-canvas
+   when it ends. Re-hovering replays it. */
+.app-title:hover .logo-shine-band {
+  animation: logo-shine 1100ms ease-out;
 }
 
-.app-title:hover .logo-hover-layer { opacity: 1; }
+@keyframes logo-shine {
+  from { transform: translateX(0); }
+  to { transform: translateX(340px); }
+}
 
 .hidden { display: none !important; }
 
@@ -281,8 +285,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .seg-option, .exercise-box, .exercise-name,
-  .logo-hover-layer { transition: none; }
+  .seg-option, .exercise-box, .exercise-name { transition: none; }
+  .app-title:hover .logo-shine-band { animation: none; }
 }
 
 select {

@@ -337,7 +337,6 @@
     revealTabNumbers();
     correctBtn.disabled = false;
     incorrectBtn.disabled = false;
-    hintEl.textContent = "Did you play it right?";
     phase = "reveal";
   }
 
