@@ -15,6 +15,7 @@
   var exerciseChecks = Array.prototype.slice.call(
     document.querySelectorAll(".exercise-checkbox"));
   var exerciseHintEl = document.getElementById("exercise-hint");
+  var startWrapEl = document.getElementById("start-wrap");
   var timerEl = document.getElementById("timer");
   var roundKeyEl = document.getElementById("round-key");
   var roundScaleEl = document.getElementById("round-scale");
@@ -443,6 +444,14 @@
     c.addEventListener("change", updateStartState);
   });
   updateStartState(); // belt-and-braces vs. browser form-state restoration
+  // Poking the locked Start (clicks pass through it via CSS
+  // pointer-events) wiggles the dialog bubble for emphasis.
+  startWrapEl.addEventListener("click", function () {
+    if (!startBtn.disabled) return;
+    exerciseHintEl.classList.remove("bubble-shake");
+    void exerciseHintEl.offsetWidth; // restart the animation
+    exerciseHintEl.classList.add("bubble-shake");
+  });
   // The title is a home link: from any screen it abandons the session
   // (timer stopped, rounds discarded — no results) and shows the menu.
   appTitleEl.addEventListener("click", function () {

@@ -282,12 +282,72 @@ body {
   outline-offset: 2px;
 }
 
-/* Tucks under the picker, near Start, against the panel's 1.75rem gap. */
-.exercise-hint {
-  margin: -1rem 0 0;
-  font-size: 0.8rem;
-  color: var(--muted);
+/* JRPG dialog bubble: floats above the Start button (absolute — it can
+   never move the layout). Classic double frame: bright outer border,
+   then a bg gap and a muted inner ring via inset box-shadows; a
+   two-triangle tail points down at Start. */
+.start-wrap { position: relative; }
+
+.start-wrap:has(#start-btn:disabled) { cursor: not-allowed; }
+
+.dialog-bubble {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  margin: 0;
+  padding: 0.55rem 1rem;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 2px solid var(--text);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 4px var(--muted);
+  animation: bubble-in 140ms ease-out;
 }
+
+.dialog-bubble::before,
+.dialog-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-style: solid;
+  border-color: transparent;
+}
+
+.dialog-bubble::before { /* outer (border-coloured) triangle */
+  bottom: -9px;
+  border-width: 9px 8px 0;
+  border-top-color: var(--text);
+}
+
+.dialog-bubble::after { /* inner fill triangle, joins the bubble body */
+  bottom: -5px;
+  border-width: 6px 5px 0;
+  border-top-color: var(--bg);
+}
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateX(-50%) scale(0.9); }
+}
+
+/* Poking the locked Start makes the bubble wiggle (app.js restarts the
+   animation by re-adding the class). */
+.bubble-shake { animation: bubble-shake 300ms ease; }
+
+@keyframes bubble-shake {
+  0%, 100% { transform: translateX(-50%); }
+  25% { transform: translateX(calc(-50% - 6px)); }
+  75% { transform: translateX(calc(-50% + 6px)); }
+}
+
+/* Disabled buttons swallow clicks entirely; letting them pass through
+   lets the wrapper hear the attempt and shake the bubble. */
+#start-btn:disabled { pointer-events: none; }
 
 @media (max-width: 600px) {
   .exercise-groups { grid-template-columns: 1fr; }
@@ -297,6 +357,7 @@ body {
   .seg-option, .exercise-box, .exercise-name { transition: none; }
   .app-title:hover .logo-shine-band { animation: none; }
   #start-btn:hover::after { animation: none; }
+  .dialog-bubble, .bubble-shake { animation: none; }
 }
 
 select {
@@ -378,6 +439,7 @@ button:disabled { cursor: not-allowed; }
   position: relative;
   overflow: hidden;
   padding-block: 0.85rem; /* a little taller than the standard button */
+  width: 100%; /* fill the wrapper, as it filled the panel before */
 }
 
 #start-btn::after {

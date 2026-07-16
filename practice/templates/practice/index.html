@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=24">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=25">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -127,10 +127,13 @@
           </div>
         </div>
 
-        <p id="exercise-hint" class="exercise-hint hidden" aria-live="polite">
-          Pick at least one exercise</p>
-
-        <button id="start-btn" class="btn btn-primary">Start</button>
+        <!-- JRPG dialog bubble: absolutely positioned above Start, so
+             showing/hiding it can never move the layout. -->
+        <div class="start-wrap" id="start-wrap">
+          <p id="exercise-hint" class="dialog-bubble hidden" aria-live="polite">
+            Pick at least one exercise!</p>
+          <button id="start-btn" class="btn btn-primary">Start</button>
+        </div>
       </div>
 
       <p class="keyboard-tip">Tip: during a round, press <kbd>SPACE</kbd> to reveal,
@@ -220,6 +223,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=11"></script>
+  <script src="{% static 'practice/app.js' %}?v=12"></script>
 </body>
 </html>
