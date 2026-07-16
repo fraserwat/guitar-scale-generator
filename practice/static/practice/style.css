@@ -47,14 +47,11 @@ body {
   flex-direction: column;
 }
 
-/* The visible screen centres in the space BELOW the title (auto margins:
-   centred when it fits, collapse to 0 for normal scroll when it doesn't).
-   The title itself stays pinned to the top, so it never shifts when
-   screens of different heights swap in. */
+/* Centres the visible screen below the pinned title; auto margins
+   collapse to 0 when content overflows, so scroll still works. */
 .screen { margin: auto 0; }
 
-/* Short windows: narrow the column so the width-driven diagrams shrink
-   proportionally and the game screen fits without scrolling. */
+/* Short windows: a narrower column shrinks the width-driven diagrams. */
 @media (max-height: 780px) {
   .app { max-width: 620px; }
 }
@@ -76,10 +73,7 @@ body {
   filter: drop-shadow(0 0 8px rgba(255, 171, 74, 0.18)); /* resting glow */
 }
 
-/* Hover: a JRPG-style shine sweeps across the lettering once. The band
-   rests off-canvas left (rect x=-60, clipped anyway) and the animation
-   carries it past the wordmark's right edge, then snaps back off-canvas
-   when it ends. Re-hovering replays it. */
+/* Shine sweep across the wordmark, once per hover. */
 .app-title:hover .logo-shine-band {
   animation: logo-shine 1100ms ease-out;
 }
@@ -91,12 +85,13 @@ body {
 
 .hidden { display: none !important; }
 
-/* Vertical rhythm (https://piccalil.li/blog/flow-utility/): siblings in
-   a .flow container space themselves off one rule instead of ad-hoc
-   per-element margins; children override --flow-space where the rhythm
-   genuinely differs (e.g. after an extruded box). The zeroing rule
-   replaces UA/per-element block margins, so children must not set
-   their own (they'd win the cascade tie by coming later in the file). */
+::selection { background: var(--accent); color: #120b02; }
+
+/* Vertical rhythm: siblings in a .flow container space themselves
+   off one rule instead of ad-hoc per-element margins; children
+   override --flow-space where the rhythm genuinely differs (e.g.
+   after an extruded box). The zeroing rule replaces UA/per-element
+   block margins, so children must not set their own */
 .flow > * { margin-block: 0; }
 .flow > * + * { margin-block-start: var(--flow-space, 1rem); }
 
@@ -108,21 +103,15 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
-  /* One alignment rule app-wide: every screen's content spans the .app
-     column (like .neck/.tab at width 100%), so the title, panel, and
-     game screen all share the same left edge. No per-element widths. */
+  /* No width of its own: every screen spans the .app column. */
 }
 
-/* The big surfaces (config panel, neck diagram, TAB staff) get the
-   wordmark's own treatment: a pronounced border as the "outline", a
-   hard offset extrude behind the box, and the faint resting glow. */
-.panel, .neck, .tab {
+/* Big surfaces: outline border, hard extrude, faint glow. */
+.panel, .neck, .tab, .results-summary {
   border: 2px solid #66738c;
   box-shadow: 6px 6px 0 var(--extrude-grey), 0 0 24px rgba(255, 171, 74, 0.08);
 }
 
-/* Children stretch to the field's width (the flex default) — labels are
-   inline text, so stretching is harmless there. */
 .field {
   display: flex;
   flex-direction: column;
@@ -141,8 +130,7 @@ body {
   box-shadow: 3px 3px 0 var(--extrude-grey); /* the buttons' extrude depth */
 }
 
-/* Real radios, visually hidden but kept adjacent for the + selectors
-   (and for keyboard/assistive-tech semantics). */
+/* Real radios, hidden but adjacent: keyboard/AT semantics survive. */
 .seg-input {
   position: absolute;
   opacity: 0;
@@ -150,7 +138,7 @@ body {
 }
 
 .seg-option {
-  flex: 1 1 0;                /* exactly 50% each, content-independent */
+  flex: 1 1 0;                /* exactly 50% each */
   min-width: 0;
   display: flex;
   align-items: center;
@@ -163,8 +151,8 @@ body {
 }
 
 .seg-input:checked + .seg-option {
-  background: var(--gloss-orange); /* matches the GBA buttons */
-  color: #120b02;             /* dark bold text, matches .btn-primary */
+  background: var(--gloss-orange);
+  color: #120b02;
   font-weight: 700;
 }
 
@@ -175,8 +163,7 @@ body {
   outline-offset: -2px;
 }
 
-/* The "soon" badge hangs off the label text without occupying layout
-   space, so the text stays dead-centre and segment widths stay 50/50. */
+/* The badge takes no layout space, keeping the label dead-centre. */
 .seg-text { position: relative; }
 
 .seg-badge {
@@ -210,7 +197,6 @@ body {
   gap: 0.75rem;
 }
 
-/* A whisper of a border: --line (#4b5568) at reduced alpha. */
 .exercise-group {
   border: 1px solid rgba(75, 85, 104, 0.45);
   border-radius: 8px;
@@ -242,9 +228,7 @@ body {
   transition: background 120ms ease, border-color 120ms ease;
 }
 
-/* Pure-CSS tick: a rotated two-sided border "L", dark on the accent fill.
-   translate(-50%, -54%) centres the glyph in the box (the extra 4% is an
-   optical nudge — a check's ink sits low, so dead-centre reads as droopy). */
+/* Rotated border-"L" tick; the -54% is an optical nudge upward. */
 .exercise-box::after {
   content: "";
   position: absolute;
@@ -259,7 +243,6 @@ body {
 }
 
 .exercise-option input:checked + .exercise-box {
-  /* Mini GBA: glossy face, dark outline, tiny hard extrude */
   background: var(--gloss-orange);
   border-color: #0c0f14;
   box-shadow: 2px 2px 0 var(--extrude-orange);
@@ -282,10 +265,8 @@ body {
   outline-offset: 2px;
 }
 
-/* Speech bubble in the house GBA style: panel surface, accent-orange
-   border, the buttons' hard extrude, a faint glow so it pops without
-   leaving the design language. Absolute above the Start button — it
-   can never move the layout. Two-triangle tail points down at Start. */
+/* House-style speech bubble, absolute above Start: showing it can
+   never move the layout. */
 .start-wrap { position: relative; }
 
 .start-wrap:has(#start-btn:disabled) { cursor: not-allowed; }
@@ -319,13 +300,13 @@ body {
   border-color: transparent;
 }
 
-.dialog-bubble::before { /* outer (border-coloured) triangle */
+.dialog-bubble::before { /* tail border */
   bottom: -9px;
   border-width: 9px 8px 0;
   border-top-color: var(--accent);
 }
 
-.dialog-bubble::after { /* inner fill triangle, joins the bubble body */
+.dialog-bubble::after { /* tail fill */
   bottom: -4px;
   border-width: 6px 5px 0;
   border-top-color: var(--panel);
@@ -335,8 +316,7 @@ body {
   from { opacity: 0; transform: translateX(-50%) scale(0.9); }
 }
 
-/* Poking the locked Start makes the bubble wiggle (app.js restarts the
-   animation by re-adding the class). */
+/* Wiggle when the locked Start is poked (app.js re-adds the class). */
 .bubble-shake { animation: bubble-shake 300ms ease; }
 
 @keyframes bubble-shake {
@@ -345,8 +325,7 @@ body {
   75% { transform: translateX(calc(-50% + 6px)); }
 }
 
-/* Disabled buttons swallow clicks entirely; letting them pass through
-   lets the wrapper hear the attempt and shake the bubble. */
+/* Clicks pass through the locked Start so the wrapper can shake the bubble. */
 #start-btn:disabled { pointer-events: none; }
 
 @media (max-width: 600px) {
@@ -357,32 +336,29 @@ body {
   .seg-option, .exercise-box, .exercise-name { transition: none; }
   .app-title:hover .logo-shine-band { animation: none; }
   #start-btn:hover::after { animation: none; }
-  .dialog-bubble, .bubble-shake { animation: none; }
+  .dialog-bubble, .bubble-shake, .timer-low { animation: none; }
 }
 
 select {
-  background: var(--bg);
+  appearance: none;
+  background: var(--bg)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23ffab4a' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")
+    no-repeat right 0.8rem center;
   color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 0.5rem;
+  border: 2px solid #66738c;
+  border-radius: 8px;
+  padding: 0.5rem 2.4rem 0.5rem 0.75rem;
   font-size: 1rem;
   cursor: pointer;
+  box-shadow: 3px 3px 0 var(--extrude-grey);
 }
 
-/* Every enabled button is clickable — belt-and-braces alongside .btn, so
-   any future/dynamically created button gets the pointer too. */
 button:not(:disabled) { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 
-/* GBA-treated buttons, matching the wordmark: glossy shine-line faces,
-   dark outline, hard extrude in a darker shade of each button's own
-   colour; :active presses the button down into its extrude.
-
-   Structure lives HERE and only here — variants and states swap
-   colours (background / text / border-colour / --extrude) and must
-   never touch geometry (border width, weight, padding, offsets), so a
-   state flip can never change a button's size. */
+/* GBA buttons. Geometry lives on .btn ONLY; variants and states swap
+   colours (background/text/border-colour/--extrude) so a state flip
+   can never change a button's size. */
 .btn {
   font-size: 1rem;
   font-weight: 700;
@@ -425,21 +401,19 @@ button:disabled { cursor: not-allowed; }
   --extrude: var(--extrude-red);
 }
 
-/* Pre-reveal judge buttons: base grey structure, fully legible (the
-   generic 45% disabled fade vanished on this bg). Colours only. */
+/* Pre-reveal judge buttons: grey but fully legible. */
 .btn-correct:disabled,
 .btn-incorrect:disabled {
   opacity: 1;
   color: var(--muted);
 }
 
-/* JRPG shine sweep on the hero button only (the judge buttons are
-   pressed rapid-fire mid-game — a constant sweep would be noisy). */
+/* Shine sweep on the hero button only. */
 #start-btn {
   position: relative;
   overflow: hidden;
-  padding-block: 0.85rem; /* a little taller than the standard button */
-  width: 100%; /* fill the wrapper, as it filled the panel before */
+  padding-block: 0.85rem;
+  width: 100%;
 }
 
 #start-btn::after {
@@ -477,6 +451,16 @@ button:disabled { cursor: not-allowed; }
   color: var(--text);
 }
 
+/* Final 30 seconds: the countdown ignites. */
+.timer-low {
+  color: var(--accent);
+  animation: timer-pulse 1s ease infinite;
+}
+
+@keyframes timer-pulse {
+  50% { opacity: 0.7; }
+}
+
 .round-header { font-size: 1.3rem; text-align: right; }
 .round-form { font-size: 0.95rem; color: var(--muted); }
 .round-key { font-weight: 700; color: var(--accent); }
@@ -499,8 +483,7 @@ button:disabled { cursor: not-allowed; }
    perceived gap below them). */
 .tab, .hint { --flow-space: 1.5rem; }
 
-/* SVG paint lives here, not in JS attributes, so the palette stays in
-   one place (app.js only sets geometry + classes). */
+/* SVG paint (app.js only sets geometry + classes). */
 .neck .fret-line { stroke: var(--line); }
 .neck .string-line { stroke: #b8c2d2; }
 .neck .fret-label { fill: #c5cfde; font-size: 16px; }
@@ -509,10 +492,8 @@ button:disabled { cursor: not-allowed; }
 .tab .tab-mask { fill: var(--bg); }
 .tab .tab-num { fill: var(--note); font-size: 13px; font-family: monospace; }
 
-/* Note dots wear the wordmark treatment (gradients defined in the neck
-   svg by app.js): roots are glossy Runner-orange with the dark GBA
-   outline; plain notes stay a black hole in a white ring, with a subtle
-   sheen. (.root must follow .tab-num so the accent fill wins there.) */
+/* Note dots: glossy orange roots, sheened dark plain notes (gradients
+   drawn into the neck svg by app.js). .root must follow .tab-num. */
 .neck .root {
   fill: url(#dot-orange);
   stroke: #0c0f14;
@@ -526,13 +507,15 @@ button:disabled { cursor: not-allowed; }
 .tab .root { fill: var(--accent); font-weight: 700; }
 
 .hint { color: var(--muted); font-size: 0.95rem; }
+/* Keycaps with their own tiny extrude — pressable-looking. */
 kbd {
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid #66738c;
   border-radius: 4px;
   padding: 0.05rem 0.45rem;
   font-family: inherit;
   color: var(--text);
+  box-shadow: 0 2px 0 var(--extrude-grey);
 }
 
 .judge-buttons { display: flex; gap: 1.25rem; }
@@ -562,7 +545,6 @@ kbd {
 
 .results-summary {
   background: var(--panel);
-  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 1.25rem 1.5rem;
 }
@@ -608,7 +590,7 @@ kbd {
   height: 100%;
   width: 0;
   border-radius: inherit;
-  background: var(--green);
+  background: var(--gloss-green);
   transition: width 0.5s ease;
 }
 
@@ -629,13 +611,14 @@ kbd {
 }
 
 .results-dot {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
+  border: 1px solid #0c0f14;
   flex: none;
 }
-.results-dot-correct { background: var(--green); }
-.results-dot-incorrect { background: var(--red); }
+.results-dot-correct { background: var(--gloss-green); }
+.results-dot-incorrect { background: var(--gloss-red); }
 
 .results-count {
   font-size: 0.78rem;

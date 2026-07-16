@@ -244,6 +244,7 @@
   function tick() {
     timeLeft -= 1;
     timerEl.textContent = formatTime(Math.max(timeLeft, 0));
+    timerEl.classList.toggle("timer-low", timeLeft <= 30);
     if (timeLeft > 0) return;
     clearInterval(timerId);
     timerId = null;
@@ -286,6 +287,7 @@
     overtime = false;
     timeLeft = parseInt(timerLengthEl.value, 10) * 60;
     timerEl.textContent = formatTime(timeLeft);
+    timerEl.classList.remove("timer-low");
     showScreen(exerciseScreen);
     drawTab(null);
     timerId = setInterval(tick, 1000);
