@@ -17,6 +17,9 @@
 
 body {
   margin: 0;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -25,7 +28,11 @@ body {
 
 .app {
   max-width: 720px;
-  margin: 0 auto;
+  width: 100%;
+  /* Auto margins centre the column in the viewport when it fits and
+     collapse to 0 when it doesn't (normal scroll, nothing clipped) —
+     safer than justify-content: center on the flex body. */
+  margin: auto;
   padding: 1.25rem 1rem 2rem;
 }
 
