@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=25">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=26">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -110,7 +110,7 @@
              checked on every load — deliberately no persistence. -->
         <div class="field">
           <span class="group-heading">Practice Exercises</span>
-          <div class="exercise-groups" id="exercise-groups">
+          <div class="exercise-groups">
             {% for group in exercise_groups %}
             <div class="exercise-group">
               <h3 class="group-heading">{{ group.label }}</h3>
@@ -223,6 +223,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=12"></script>
+  <script src="{% static 'practice/app.js' %}?v=13"></script>
 </body>
 </html>

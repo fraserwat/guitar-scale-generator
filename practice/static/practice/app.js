@@ -77,18 +77,53 @@
     return NECK.top + (stringNum - 1) * NECK.stringGap;
   }
 
+  /** First fret shown on the neck. The window is 6 frets wide; a 4-fret
+   *  shape sits centred in it (one empty fret each side) instead of
+   *  hugging the left edge. Wider shapes anchor on their lowest fret as
+   *  served. (A shape at fret 1 can't shift down — there's no fret 0.) */
+  function viewStart(round) {
+    var top = Math.max.apply(null, round.notes.map(function (n) {
+      return n.fret;
+    }));
+    var span = top - round.window_start + 1;
+    return (span === 4 && round.window_start > 1)
+      ? round.window_start - 1
+      : round.window_start;
+  }
+
+  /** The wordmark's glossy shine-line fill at dot scale: lighter upper
+   *  half with a hard drop at the middle. */
+  function glossGradient(id, tones) {
+    var grad = el("linearGradient", { id: id, x1: 0, y1: 0, x2: 0, y2: 1 });
+    [[0, tones[0]], [0.5, tones[1]], [0.5, tones[2]], [1, tones[3]]]
+      .forEach(function (stop) {
+        grad.appendChild(el("stop", {
+          offset: stop[0], "stop-color": stop[1]
+        }));
+      });
+    return grad;
+  }
+
   /** Draw the empty neck: strings, fret lines, and HIDDEN fret-number
    *  labels. The labels would give the position away, so they stay hidden
    *  until the answer phase (revealed together with the note dots). */
   function drawNeck(windowStart) {
     neckSvg.textContent = "";
 
+    // Dot fills (CSS references these by id); redrawn with the neck.
+    var defs = el("defs", {});
+    defs.appendChild(glossGradient("dot-orange",
+      ["#ffc98a", "#ffb964", "#f9993a", "#ffab4a"]));
+    defs.appendChild(glossGradient("dot-dark",
+      ["#39424f", "#232b36", "#0c0f14", "#10141b"]));
+    neckSvg.appendChild(defs);
+
     // Fret lines (vertical). Leftmost line is fret wire windowStart - 1.
     for (var i = 0; i <= NECK.nFrets; i++) {
       var x = NECK.left + i * NECK.fretW;
       neckSvg.appendChild(el("line", {
         x1: x, y1: NECK.top, x2: x, y2: NECK.bottom,
-        stroke: "#4b5568", "stroke-width": i === 0 ? 4 : 2
+        "class": "fret-line", "stroke-width": i === 0 ? 4 : 2
       }));
     }
 
@@ -96,7 +131,7 @@
     for (var s = 1; s <= NECK.nStrings; s++) {
       neckSvg.appendChild(el("line", {
         x1: NECK.left, y1: stringY(s), x2: NECK.right, y2: stringY(s),
-        stroke: "#b8c2d2", "stroke-width": 1 + (s - 1) * 0.4
+        "class": "string-line", "stroke-width": 1 + (s - 1) * 0.4
       }));
     }
 
@@ -109,8 +144,7 @@
         x: NECK.left + (f + 0.5) * NECK.fretW,
         y: NECK.bottom + 35,
         "text-anchor": "middle",
-        fill: "#c5cfde",
-        "font-size": 16
+        "class": "fret-label"
       }, String(windowStart + f)));
     }
     neckSvg.appendChild(labels);
@@ -124,16 +158,14 @@
 
   /** Fill the neck with the round's note dots (roots highlighted). */
   function drawNotes(round) {
+    var start = viewStart(round);
     var dots = el("g", { id: "note-dots" });
     round.notes.forEach(function (note) {
-      var cx = NECK.left + (note.fret - round.window_start + 0.5) * NECK.fretW;
+      var cx = NECK.left + (note.fret - start + 0.5) * NECK.fretW;
       var cy = stringY(note.string);
       var dot = note.is_root
         ? el("circle", { cx: cx, cy: cy, r: 10, "class": "root" })
-        : el("circle", {
-            cx: cx, cy: cy, r: 9,
-            fill: "#0c0f14", stroke: "#eef2f8", "stroke-width": 2.5
-          });
+        : el("circle", { cx: cx, cy: cy, r: 9, "class": "note-dot" });
       dot.appendChild(el("title", {}, note.note_name));
       dots.appendChild(dot);
     });
@@ -160,12 +192,10 @@
     for (var i = 0; i < 6; i++) {
       var y = TAB.top + i * TAB.lineGap;
       tabSvg.appendChild(el("text", {
-        x: 18, y: y + 5, "text-anchor": "middle",
-        fill: "#aab5c5", "font-size": 13, "font-family": "monospace"
+        x: 18, y: y + 5, "text-anchor": "middle", "class": "tab-label"
       }, labels[i]));
       tabSvg.appendChild(el("line", {
-        x1: TAB.left, y1: y, x2: TAB.right, y2: y,
-        stroke: "#4b5568", "stroke-width": 1
+        x1: TAB.left, y1: y, x2: TAB.right, y2: y, "class": "tab-line"
       }));
     }
     if (!round) return; // start screen: staff only, no run yet
@@ -180,13 +210,12 @@
       var cy = tabY(note.string);
       // Mask the staff line behind the number (conventional TAB look).
       numbers.appendChild(el("rect", {
-        x: cx - 8, y: cy - 7, width: 16, height: 14, fill: "#0c0f14"
+        x: cx - 8, y: cy - 7, width: 16, height: 14, "class": "tab-mask"
       }));
       var num = el("text", {
-        x: cx, y: cy + 5, "text-anchor": "middle", fill: "#eef2f8",
-        "font-size": 13, "font-family": "monospace"
+        x: cx, y: cy + 5, "text-anchor": "middle", "class": "tab-num"
       }, String(note.fret));
-      if (note.is_root) num.setAttribute("class", "root");
+      if (note.is_root) num.setAttribute("class", "tab-num root");
       num.appendChild(el("title", {}, note.note_name));
       numbers.appendChild(num);
     });
@@ -308,7 +337,7 @@
     roundScaleEl.textContent = round.scale;
     roundLabelEl.textContent = round.display_label;
     roundDirectionEl.textContent = round.direction;
-    drawNeck(round.window_start); // UNFILLED (and unlabelled) until spacebar
+    drawNeck(viewStart(round)); // UNFILLED (and unlabelled) until spacebar
     drawTab(round); // staff visible, numbers hidden until spacebar
     phase = "play";
   }
@@ -360,8 +389,7 @@
     // object is stored so the re-ask renders without a fetch.
     if (!correct) retryQueue.push({ round: round, delay: 2 });
 
-    // Logging stub endpoint. TODO(spaced repetition): this data will drive
-    // round selection weighting server-side later.
+    // Best-effort attempt log — a failed POST never blocks the game.
     fetch("/api/log/", {
       method: "POST",
       headers: {
@@ -376,7 +404,7 @@
         correct: correct,
         is_retry: wasRetry
       })
-    }).catch(function () { /* logging is best-effort in v1 */ });
+    }).catch(function () { /* see comment above */ });
 
     nextRound();
   }

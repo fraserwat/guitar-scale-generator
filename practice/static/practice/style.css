@@ -2,12 +2,12 @@
    WCAG AA against the background). */
 
 :root {
-  --bg: #0c0f14;       /* darker background... */
+  --bg: #0c0f14;
   --panel: #161b23;
-  --line: #4b5568;     /* stronger panel/fret lines */
-  --text: #f4f7fb;     /* ...brighter text */
-  --muted: #aab5c5;    /* muted text still ~8:1 on --bg */
-  --accent: #ffab4a;   /* root notes (brightened for stronger contrast) */
+  --line: #4b5568;     /* panel/fret lines */
+  --text: #f4f7fb;
+  --muted: #aab5c5;    /* muted text, still ~8:1 on --bg */
+  --accent: #ffab4a;   /* root notes / primary actions */
   --note: #eef2f8;     /* plain scale notes */
   --green: #4ed184;
   --red: #ff7a75;
@@ -282,10 +282,10 @@ body {
   outline-offset: 2px;
 }
 
-/* JRPG dialog bubble: floats above the Start button (absolute — it can
-   never move the layout). Classic double frame: bright outer border,
-   then a bg gap and a muted inner ring via inset box-shadows; a
-   two-triangle tail points down at Start. */
+/* Speech bubble in the house GBA style: panel surface, accent-orange
+   border, the buttons' hard extrude, a faint glow so it pops without
+   leaving the design language. Absolute above the Start button — it
+   can never move the layout. Two-triangle tail points down at Start. */
 .start-wrap { position: relative; }
 
 .start-wrap:has(#start-btn:disabled) { cursor: not-allowed; }
@@ -298,14 +298,14 @@ body {
   z-index: 1;
   margin: 0;
   padding: 0.55rem 1rem;
-  background: var(--bg);
+  background: var(--panel);
   color: var(--text);
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
-  border: 2px solid var(--text);
+  border: 2px solid var(--accent);
   border-radius: 8px;
-  box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 4px var(--muted);
+  box-shadow: 3px 3px 0 var(--extrude-orange), 0 0 18px rgba(255, 171, 74, 0.25);
   animation: bubble-in 140ms ease-out;
 }
 
@@ -322,13 +322,13 @@ body {
 .dialog-bubble::before { /* outer (border-coloured) triangle */
   bottom: -9px;
   border-width: 9px 8px 0;
-  border-top-color: var(--text);
+  border-top-color: var(--accent);
 }
 
 .dialog-bubble::after { /* inner fill triangle, joins the bubble body */
-  bottom: -5px;
+  bottom: -4px;
   border-width: 6px 5px 0;
-  border-top-color: var(--bg);
+  border-top-color: var(--panel);
 }
 
 @keyframes bubble-in {
@@ -499,12 +499,29 @@ button:disabled { cursor: not-allowed; }
    perceived gap below them). */
 .tab, .hint { --flow-space: 1.5rem; }
 
-/* Root-note pips: app.js tags roots with class="root"; the CSS fill wins
-   over the inline presentation attributes on the other notes. */
+/* SVG paint lives here, not in JS attributes, so the palette stays in
+   one place (app.js only sets geometry + classes). */
+.neck .fret-line { stroke: var(--line); }
+.neck .string-line { stroke: #b8c2d2; }
+.neck .fret-label { fill: #c5cfde; font-size: 16px; }
+.tab .tab-line { stroke: var(--line); stroke-width: 1; }
+.tab .tab-label { fill: var(--muted); font-size: 13px; font-family: monospace; }
+.tab .tab-mask { fill: var(--bg); }
+.tab .tab-num { fill: var(--note); font-size: 13px; font-family: monospace; }
+
+/* Note dots wear the wordmark treatment (gradients defined in the neck
+   svg by app.js): roots are glossy Runner-orange with the dark GBA
+   outline; plain notes stay a black hole in a white ring, with a subtle
+   sheen. (.root must follow .tab-num so the accent fill wins there.) */
 .neck .root {
-  fill: var(--accent);
-  stroke: var(--text);
+  fill: url(#dot-orange);
+  stroke: #0c0f14;
   stroke-width: 2;
+}
+.neck .note-dot {
+  fill: url(#dot-dark);
+  stroke: var(--note);
+  stroke-width: 2.5;
 }
 .tab .root { fill: var(--accent); font-weight: 700; }
 
