@@ -130,6 +130,7 @@ body {
   border-radius: 999px;
   background: var(--bg);
   overflow: hidden;
+  box-shadow: 4px 4px 0 #333d4d; /* the surfaces' extrude */
 }
 
 /* Real radios, visually hidden but kept adjacent for the + selectors
@@ -154,7 +155,8 @@ body {
 }
 
 .seg-input:checked + .seg-option {
-  background: var(--accent);
+  /* Glossy face, matching the GBA buttons */
+  background: linear-gradient(180deg, #ffd699, #ffc27a 50%, #f5921e 50%, #ffab4a);
   color: #120b02;             /* dark bold text, matches .btn-primary */
   font-weight: 700;
 }
@@ -252,8 +254,10 @@ body {
 }
 
 .exercise-option input:checked + .exercise-box {
-  background: var(--accent);
-  border-color: var(--accent);
+  /* Mini GBA: glossy face, dark outline, tiny hard extrude */
+  background: linear-gradient(180deg, #ffd699, #ffc27a 50%, #f5921e 50%, #ffab4a);
+  border-color: #0c0f14;
+  box-shadow: 2px 2px 0 #a85f1a;
 }
 
 .exercise-option input:checked + .exercise-box::after { opacity: 1; }
@@ -287,6 +291,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .seg-option, .exercise-box, .exercise-name { transition: none; }
   .app-title:hover .logo-shine-band { animation: none; }
+  #start-btn:hover::after { animation: none; }
 }
 
 select {
@@ -314,16 +319,84 @@ button:disabled { cursor: not-allowed; }
   cursor: pointer;
 }
 
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #120b02; font-weight: 700; }
-.btn-primary:hover { filter: brightness(1.1); }
-/* Correct/incorrect: solid fills with dark text (matches .btn-primary's
-   treatment) — well above WCAG AA vs. the old outline-only style. */
-.btn-correct:not(:disabled) { background: var(--green); border-color: var(--green); color: #04210f; font-weight: 700; }
-.btn-incorrect:not(:disabled) { background: var(--red); border-color: var(--red); color: #2b0605; font-weight: 700; }
+/* GBA-treated buttons, matching the wordmark: glossy shine-line faces
+   (hard mid-stop gradients), dark outline, hard extrude in a darker
+   shade of each button's own colour. Dark text stays well above WCAG
+   AA on every face. :active presses the button down into its extrude —
+   the classic tactile game-button push. */
+.btn-primary,
+.btn-correct:not(:disabled),
+.btn-incorrect:not(:disabled) {
+  border: 2px solid #0c0f14;
+  font-weight: 700;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #ffd699, #ffc27a 50%, #f5921e 50%, #ffab4a);
+  color: #120b02;
+  box-shadow: 4px 4px 0 #a85f1a;
+}
+
+.btn-correct:not(:disabled) {
+  background: linear-gradient(180deg, #a9efc7, #7ce3a9 50%, #2fb56a 50%, #4ed184);
+  color: #04210f;
+  box-shadow: 4px 4px 0 #1d7a45;
+}
+
+.btn-incorrect:not(:disabled) {
+  background: linear-gradient(180deg, #ffc6c3, #ff9d99 50%, #f0524c 50%, #ff7a75);
+  color: #2b0605;
+  box-shadow: 4px 4px 0 #a83833;
+}
+
+.btn-primary:not(:disabled):hover,
 .btn-correct:not(:disabled):hover,
-.btn-incorrect:not(:disabled):hover { filter: brightness(1.1); }
+.btn-incorrect:not(:disabled):hover { filter: brightness(1.07); }
+
+.btn-primary:not(:disabled):active {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 #a85f1a;
+}
+
+.btn-correct:not(:disabled):active {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 #1d7a45;
+}
+
+.btn-incorrect:not(:disabled):active {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 #a83833;
+}
+
+/* JRPG shine sweep on the hero button only (the judge buttons are
+   pressed rapid-fire mid-game — a constant sweep would be noisy). */
+#start-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+#start-btn::after {
+  content: "";
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  left: -40px;
+  width: 30px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0),
+                              rgba(255, 255, 255, 0.7),
+                              rgba(255, 255, 255, 0));
+  transform: skewX(-14deg);
+  pointer-events: none;
+}
+
+#start-btn:hover::after { animation: btn-shine 900ms ease-out; }
+
+@keyframes btn-shine {
+  from { transform: skewX(-14deg) translateX(0); }
+  to { transform: skewX(-14deg) translateX(780px); }
+}
 
 /* Pre-reveal judge buttons: still grey/inactive, but clearly legible —
    the generic 45%-opacity disabled look all but vanished on this bg. */
