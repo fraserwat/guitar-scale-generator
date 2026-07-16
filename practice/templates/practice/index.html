@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="preload" href="{% static 'practice/fonts/baloo2-800-latin.woff2' %}"
-        as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=32">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=33">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -176,20 +174,20 @@
       </div>
 
       <!-- Root notes are filled orange, plain scale notes outlined — no
-           legend needed; that convention is intuitive to guitarists.
-           The wrapper anchors the round-1 coaching bubble over the
-           (empty) grid; app.js hides it after the first reveal. -->
-      <div class="neck-wrap">
-        <svg id="neck" class="neck" viewBox="0 0 560 240" role="img"
-             aria-label="Guitar neck diagram"></svg>
-        <p id="neck-bubble" class="dialog-bubble dialog-bubble--neck hidden"
-           aria-live="polite"></p>
-      </div>
+           legend needed; that convention is intuitive to guitarists. -->
+      <svg id="neck" class="neck" viewBox="0 0 560 240" role="img"
+           aria-label="Guitar neck diagram"></svg>
 
       <!-- TAB of the round's run: staff drawn immediately, numbers hidden
-           until the answer reveal (they'd give the position away). -->
-      <svg id="tab" class="tab" viewBox="0 0 560 130" role="img"
-           aria-label="Tablature"></svg>
+           until the answer reveal (they'd give the position away).
+           The wrapper anchors the round-1 coaching bubble over the
+           (empty) staff; app.js hides it after the first reveal. -->
+      <div class="tab-wrap">
+        <svg id="tab" class="tab" viewBox="0 0 560 130" role="img"
+             aria-label="Tablature"></svg>
+        <p id="tab-bubble" class="dialog-bubble dialog-bubble--tab hidden"
+           aria-live="polite"></p>
+      </div>
 
       <div class="judge-buttons">
         <button id="correct-btn" class="btn btn-correct" disabled>&#10003; Correct</button>
@@ -245,6 +243,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=16"></script>
+  <script src="{% static 'practice/app.js' %}?v=17"></script>
 </body>
 </html>

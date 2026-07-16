@@ -23,7 +23,7 @@
   var roundLabelEl = document.getElementById("round-label");
   var neckSvg = document.getElementById("neck");
   var tabSvg = document.getElementById("tab");
-  var neckBubbleEl = document.getElementById("neck-bubble");
+  var tabBubbleEl = document.getElementById("tab-bubble");
   var correctBtn = document.getElementById("correct-btn");
   var incorrectBtn = document.getElementById("incorrect-btn");
   var resultsSummaryEl = document.getElementById("results-summary");
@@ -307,16 +307,17 @@
   }
 
   // ---- Round-1 coaching bubble ---------------------------------------------
-  // The reveal instruction floats over the empty neck on the session's
-  // first round only; once the player reveals once, they know the move.
-  // The bubble doubles as the fetch-error notice (textContent path).
-  function showNeckBubble(html) {
-    neckBubbleEl.innerHTML = html;
-    neckBubbleEl.classList.remove("hidden");
+  // The reveal instruction floats over the empty TAB staff on the
+  // session's first round only; once the player reveals once, they know
+  // the move. The bubble doubles as the fetch-error notice
+  // (textContent path).
+  function showTabBubble(html) {
+    tabBubbleEl.innerHTML = html;
+    tabBubbleEl.classList.remove("hidden");
   }
 
-  function hideNeckBubble() {
-    neckBubbleEl.classList.add("hidden");
+  function hideTabBubble() {
+    tabBubbleEl.classList.add("hidden");
   }
 
   // ---- Game flow ------------------------------------------------------------
@@ -391,8 +392,8 @@
     drawTab(round); // staff visible, numbers hidden until reveal
     neckSvg.classList.add("revealable");
     tabSvg.classList.add("revealable");
-    if (revealHintDone) hideNeckBubble();
-    else showNeckBubble(REVEAL_HINT);
+    if (revealHintDone) hideTabBubble();
+    else showTabBubble(REVEAL_HINT);
     phase = "play";
   }
 
@@ -407,9 +408,9 @@
         presentRound(round);
       })
       .catch(function (err) {
-        neckBubbleEl.textContent =
+        tabBubbleEl.textContent =
           "Could not load a round (" + err.message + "). Retrying…";
-        neckBubbleEl.classList.remove("hidden");
+        tabBubbleEl.classList.remove("hidden");
         // Retry the FETCH only — going back through nextRound() would
         // decrement retryQueue delays again for the same turn.
         setTimeout(function () { if (phase === "loading") fetchFreshRound(); }, 1500);
@@ -422,7 +423,7 @@
     if (phase !== "play" || !currentRound) return;
     phase = "revealing";
     revealHintDone = true;
-    hideNeckBubble();
+    hideTabBubble();
     neckSvg.classList.remove("revealable");
     tabSvg.classList.remove("revealable");
     drawNotes(currentRound);

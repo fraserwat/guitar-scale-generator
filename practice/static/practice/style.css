@@ -1,17 +1,6 @@
 /* ScaleRunner — dark theme (high-contrast: text/controls aim for
    WCAG AA against the background). */
 
-/* Display face for the game surfaces (wordmark, headings, timer,
-   buttons); body text stays on the system stack. Self-hosted so the
-   wordmark's metrics stop drifting across platforms. */
-@font-face {
-  font-family: "Baloo 2";
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url("fonts/baloo2-800-latin.woff2") format("woff2");
-}
-
 :root {
   --bg: #0c0f14;
   --panel: #161b23;
@@ -34,7 +23,9 @@
   --extrude-red: #a83833;
   --extrude-grey: #333d4d;
 
-  --display-font: "Baloo 2", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* One hook for the game surfaces (wordmark, headings, timer,
+     buttons): auditioning a display face is a one-line swap here. */
+  --display-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* Type ramp — every UI font size comes from here (the seg-badge's
      0.6rem micro size is the one deliberate exception). */
@@ -325,7 +316,7 @@ body {
   transform: var(--bubble-xform);
   z-index: 1;
   margin: 0;
-  padding: 0.55rem 1rem;
+  padding: 0.75rem 1rem;
   background: var(--panel);
   color: var(--text);
   font-family: var(--display-font);
@@ -364,17 +355,17 @@ body {
   from { opacity: 0; transform: var(--bubble-xform) scale(0.9); }
 }
 
-/* Round-1 coaching bubble floats in the (empty) neck grid; the tail
+/* Round-1 coaching bubble floats over the (empty) TAB staff; the tail
    points at the diagram it's talking about. Gone after first reveal.
-   pointer-events: none so the tap it invites lands on the neck under it. */
-.dialog-bubble--neck {
+   pointer-events: none so the tap it invites lands on the TAB under it. */
+.dialog-bubble--tab {
   bottom: auto;
-  top: 42%;
+  top: 50%;
   --bubble-xform: translate(-50%, -50%);
   pointer-events: none;
 }
 
-.neck-wrap { position: relative; }
+.tab-wrap { position: relative; }
 
 /* Wiggle when the locked Start is poked (app.js re-adds the class). */
 .bubble-shake { animation: bubble-shake 300ms ease; }
