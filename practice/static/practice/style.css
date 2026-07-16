@@ -522,14 +522,12 @@ kbd {
 
 .judge-buttons { display: flex; gap: 1.25rem; }
 
-/* Understated keyboard-shorthand tip on the start menu (kept off the
-   game-loop UI). */
+/* Keyboard-shorthand tip on the start menu; sized like .hint. */
 .keyboard-tip {
   --flow-space: 1.5rem; /* clears the panel's extrude */
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   color: var(--muted);
 }
-.keyboard-tip kbd { font-size: 0.8rem; }
 
 /* ---- Results screen ----
    Hierarchy: summary card (score + progress bar) first, then rounds grouped
