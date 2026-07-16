@@ -1,6 +1,27 @@
 /* ScaleRunner — dark theme (high-contrast: text/controls aim for
    WCAG AA against the background). */
 
+/* One family, two registers: Archivo Black carries the display layer
+   (wordmark, headings, timer, buttons, bubble); variable-weight Archivo
+   carries the start menu's working text. Self-hosted, latin subset.
+   The Black cut is declared across the whole weight axis so elements
+   that ask for 700/800 never get a synthetic double-bold. */
+@font-face {
+  font-family: "Archivo Black";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("fonts/archivo-black-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("fonts/archivo-var-latin.woff2") format("woff2");
+}
+
 :root {
   --bg: #0c0f14;
   --panel: #161b23;
@@ -23,9 +44,9 @@
   --extrude-red: #a83833;
   --extrude-grey: #333d4d;
 
-  /* One hook for the game surfaces (wordmark, headings, timer,
-     buttons): auditioning a display face is a one-line swap here. */
-  --display-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* One hook per register: swapping a face is a one-line change here. */
+  --display-font: "Archivo Black", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --ui-font: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* Type ramp — every UI font size comes from here (the seg-badge's
      0.6rem micro size is the one deliberate exception). */
@@ -176,6 +197,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0;
+  font-family: var(--ui-font);
   font-size: var(--text-sm);
   font-weight: 700; /* constant weight: selection must not change metrics */
   color: var(--muted);
@@ -201,6 +223,7 @@ body {
   top: 50%;
   transform: translateY(-50%);
   margin-left: 0.4rem;
+  font-family: var(--ui-font);
   font-size: 0.6rem;
   line-height: 1;
   padding: 0.15rem 0.4rem;
@@ -288,6 +311,7 @@ body {
 .exercise-option input:checked + .exercise-box::after { opacity: 1; }
 
 .exercise-name {
+  font-family: var(--ui-font);
   font-size: var(--text-sm);
   color: var(--muted);
   transition: color 120ms ease;
@@ -590,6 +614,7 @@ kbd {
 
 /* Muted inline hint text (the start-menu keyboard tip). */
 .hint {
+  font-family: var(--ui-font);
   font-size: var(--text-sm);
   color: var(--muted);
 }

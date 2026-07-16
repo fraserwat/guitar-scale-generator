@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=33">
+  <link rel="preload" href="{% static 'practice/fonts/archivo-black-latin.woff2' %}"
+        as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{% static 'practice/fonts/archivo-var-latin.woff2' %}"
+        as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=34">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
