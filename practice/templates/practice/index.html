@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=30">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=31">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -213,7 +213,7 @@
       </p>
 
       <section id="results-group-correct" class="results-group results-group-correct hidden">
-        <h3 class="results-group-title">
+        <h3 class="group-heading results-group-title">
           <span class="results-dot results-dot-correct" aria-hidden="true"></span>
           Correct
           <span id="results-count-correct" class="results-count">0</span>
@@ -222,7 +222,7 @@
       </section>
 
       <section id="results-group-incorrect" class="results-group results-group-incorrect hidden">
-        <h3 class="results-group-title">
+        <h3 class="group-heading results-group-title">
           <span class="results-dot results-dot-incorrect" aria-hidden="true"></span>
           Needs work
           <span id="results-count-incorrect" class="results-count">0</span>
