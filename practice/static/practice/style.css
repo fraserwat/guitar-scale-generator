@@ -26,12 +26,21 @@ body {
 .app {
   max-width: 720px;
   margin: 0 auto;
-  padding: 2rem 1rem 3rem;
+  padding: 1.25rem 1rem 2rem;
+}
+
+/* Short windows: narrow the column so the width-driven diagrams shrink
+   proportionally and the game screen fits without scrolling. */
+@media (max-height: 780px) {
+  .app { max-width: 620px; }
+}
+@media (max-height: 700px) {
+  .app { max-width: 540px; }
 }
 
 /* The title doubles as a home link (click = back to the menu). */
 .app-title {
-  margin: 0 0 1.5rem;
+  margin: 0 0 1rem;
   cursor: pointer;
   user-select: none;
   width: fit-content;  /* only the wordmark is the home-link click target */
@@ -40,11 +49,12 @@ body {
 
 .app-title svg {
   overflow: visible;   /* system-font metrics vary; never clip the mark */
+  filter: drop-shadow(0 0 8px rgba(255, 171, 74, 0.18)); /* resting glow */
   transition: filter 120ms ease;
 }
 
 .app-title:hover svg {
-  filter: drop-shadow(0 0 6px rgba(255, 171, 74, 0.45));
+  filter: drop-shadow(0 0 10px rgba(255, 171, 74, 0.6));
 }
 
 .hidden { display: none !important; }
@@ -58,8 +68,15 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
-  max-width: 640px;
-  margin: 0 auto;   /* centred within the app column */
+  /* One alignment rule app-wide: every screen's content spans the .app
+     column (like .neck/.tab at width 100%), so the title, panel, and
+     game screen all share the same left edge. No per-element widths. */
+}
+
+/* The wordmark's resting glow, turned well down for the big surfaces
+   (config panel, neck diagram, TAB staff). */
+.panel, .neck, .tab {
+  box-shadow: 0 0 24px rgba(255, 171, 74, 0.08);
 }
 
 .field {
@@ -283,7 +300,7 @@ button:disabled { cursor: not-allowed; }
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1rem;
 }
 
 .timer {
@@ -309,7 +326,7 @@ button:disabled { cursor: not-allowed; }
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 10px;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 /* Root-note pips: app.js tags roots with class="root"; the CSS fill wins
@@ -321,7 +338,7 @@ button:disabled { cursor: not-allowed; }
 }
 .tab .root { fill: var(--accent); font-weight: 700; }
 
-.hint { color: var(--muted); font-size: 0.95rem; margin: 1.25rem 0; }
+.hint { color: var(--muted); font-size: 0.95rem; margin: 0.75rem 0; }
 kbd {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -336,8 +353,7 @@ kbd {
 /* Understated keyboard-shorthand tip on the start menu (kept off the
    game-loop UI). */
 .keyboard-tip {
-  margin: 1.5rem auto 0; /* centred, like the panel above it */
-  max-width: 640px;   /* aligns under the start panel */
+  margin: 1.5rem 0 0; /* spans the app column, like the panel above it */
   font-size: 0.8rem;
   color: var(--muted);
 }

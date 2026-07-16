@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=13">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=15">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -20,9 +20,11 @@
         <g transform="skewX(-8)"
            font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
            font-size="30" font-weight="800" letter-spacing="-0.5">
-          <text x="12" y="31" transform="translate(2 2)"
+          <!-- x=5 compensates the skew so the S sits on the app column
+               edge, aligned with the panel and game screen below. -->
+          <text x="5" y="31" transform="translate(3 3)"
                 fill="#4b5568"><tspan>Scale</tspan><tspan fill="#a85f1a">Runner</tspan></text>
-          <text x="12" y="31" stroke="#0c0f14" stroke-width="1.5"
+          <text x="5" y="31" stroke="#0c0f14" stroke-width="2"
                 paint-order="stroke" fill="#f4f7fb"><tspan>Scale</tspan><tspan fill="#ffab4a">Runner</tspan></text>
         </g>
       </svg>
