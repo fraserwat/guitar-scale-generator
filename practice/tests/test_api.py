@@ -48,7 +48,7 @@ class IndexPageTests(TestCase):
         html = self.client.get("/").content.decode()
         self.assertIn('id="round-label"', html)
         self.assertIn('id="round-direction"', html)
-        self.assertIn('class="keyboard-tip"', html)
+        self.assertIn("Tip: during a round", html)
         self.assertIn("for correct", html)
         self.assertIn("for incorrect", html)
         self.assertIn('id="tab"', html)
