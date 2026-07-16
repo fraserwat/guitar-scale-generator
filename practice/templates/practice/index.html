@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=31">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=32">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -147,7 +147,7 @@
         </div>
       </div>
 
-      <p class="keyboard-tip">Tip: during a round, press <kbd>SPACE</kbd> to reveal,
+      <p class="hint">Tip: during a round, press <kbd>SPACE</kbd> to reveal,
         then <kbd>,</kbd> for correct &middot; <kbd>.</kbd> for incorrect</p>
     </section>
 
