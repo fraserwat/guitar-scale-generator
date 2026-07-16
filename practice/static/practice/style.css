@@ -56,6 +56,12 @@
   --text-lg: 1.3rem;
   --text-xl: 1.6rem;
   --text-2xl: 2rem;
+
+  /* Fluid rhythm: gaps breathe with viewport height, compressing
+     smoothly on short windows (the max-height breakpoints still
+     handle column width; these handle air). */
+  --space-flow: clamp(0.65rem, 1.7svh, 1rem);
+  --space-flow-lg: clamp(1rem, 2.6svh, 1.5rem);
 }
 
 * { box-sizing: border-box; }
@@ -79,13 +85,15 @@ body {
   margin: 0 auto;
   padding: 1.25rem 1rem 2rem;
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  /* title / space / screen / space. The 2:3 split parks the game at
+     the optical centre (slightly above geometric) instead of letting
+     it sag under the pinned title; both fr rows collapse to 0 when
+     content overflows, so scroll still works. */
+  grid-template-rows: auto 2fr auto 3fr;
 }
 
-/* Centres the visible screen below the pinned title; auto margins
-   collapse to 0 when content overflows, so scroll still works. */
-.screen { margin: auto 0; }
+.screen { grid-row: 3; }
 
 /* Short windows: a narrower column shrinks the width-driven diagrams. */
 @media (max-height: 780px) {
@@ -133,16 +141,16 @@ body {
    after an extruded box). The zeroing rule replaces UA/per-element
    block margins, so children must not set their own */
 .flow > * { margin-block: 0; }
-.flow > * + * { margin-block-start: var(--flow-space, 1rem); }
+.flow > * + * { margin-block-start: var(--flow-space, var(--space-flow)); }
 
 /* ---- Start screen ---- */
 .panel {
   background: var(--panel);
   border-radius: 10px;
-  padding: 2rem;
+  padding: clamp(1.25rem, 3.2svh, 2rem) 2rem;
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  gap: clamp(1.1rem, 2.8svh, 1.75rem);
   /* No width of its own: every screen spans the .app column. */
 }
 
@@ -573,7 +581,7 @@ button:disabled { cursor: not-allowed; }
 /* Extra rhythm after the extruded boxes (the 6px extrude eats into the
    perceived gap below them) — covers the start menu's tip after the
    panel too. */
-.tab, .hint, .judge-buttons { --flow-space: 1.5rem; }
+.tab, .hint, .judge-buttons { --flow-space: var(--space-flow-lg); }
 
 /* SVG paint (app.js only sets geometry + classes). */
 .neck .fret-line { stroke: var(--line); }
@@ -652,7 +660,7 @@ kbd {
    free of per-item ✓/✗ clutter. */
 /* Results rhythm is airier than the game screen's; the summary card
    stays snug under its heading. */
-#results-screen { --flow-space: 1.75rem; }
+#results-screen { --flow-space: clamp(1.1rem, 3svh, 1.75rem); }
 
 .results-heading {
   font-family: var(--display-font);
@@ -661,7 +669,7 @@ kbd {
 }
 
 .results-summary {
-  --flow-space: 1rem;
+  --flow-space: var(--space-flow);
   background: var(--panel);
   border-radius: 10px;
   padding: 1.25rem 1.5rem;
