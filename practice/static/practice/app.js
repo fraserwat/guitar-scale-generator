@@ -12,6 +12,9 @@
   var resultsScreen = document.getElementById("results-screen");
   var timerLengthEl = document.getElementById("timer-length");
   var startBtn = document.getElementById("start-btn");
+  var exerciseChecks = Array.prototype.slice.call(
+    document.querySelectorAll(".exercise-checkbox"));
+  var exerciseHintEl = document.getElementById("exercise-hint");
   var timerEl = document.getElementById("timer");
   var roundKeyEl = document.getElementById("round-key");
   var roundScaleEl = document.getElementById("round-scale");
@@ -44,6 +47,10 @@
   var timerId = null;
   var currentRound = null;
   var rounds = [];
+  var retryQueue = []; // [{round, delay}] — failed rounds due again in `delay` turns
+  var isRetry = false; // is currentRound a re-ask of a missed round?
+  var overtime = false; // timer expired, draining retryQueue before results
+  var roundQuery = ""; // "?scales=..." for this session; "" = all exercises
 
   // ---- Neck SVG geometry ----------------------------------------------------
   // viewBox 560x240. Low E (string 6) at the BOTTOM, per fretboard-diagram
@@ -207,12 +214,46 @@
   function tick() {
     timeLeft -= 1;
     timerEl.textContent = formatTime(Math.max(timeLeft, 0));
-    if (timeLeft <= 0) endGame();
+    if (timeLeft > 0) return;
+    clearInterval(timerId);
+    timerId = null;
+    if (retryQueue.length === 0) { endGame(); return; }
+    overtime = true; // finish the in-flight round, then drain the queue
+  }
+
+  // ---- Exercise picker ------------------------------------------------------
+  function checkedScaleIds() {
+    return exerciseChecks
+      .filter(function (c) { return c.checked; })
+      .map(function (c) { return c.value; });
+  }
+
+  /** All boxes checked -> "" (cleanest URL and keeps the default no-param
+   *  server path exercised); otherwise the ?scales= filter. Ids are
+   *  server-rendered config slugs, so no URL-encoding is needed. */
+  function buildScalesQuery() {
+    var ids = checkedScaleIds();
+    if (ids.length === exerciseChecks.length) return "";
+    return "?scales=" + ids.join(",");
+  }
+
+  /** Empty selection: Start disabled + hint shown. */
+  function updateStartState() {
+    var any = checkedScaleIds().length > 0;
+    startBtn.disabled = !any;
+    exerciseHintEl.classList.toggle("hidden", any);
   }
 
   // ---- Game flow ------------------------------------------------------------
   function startGame() {
+    // Computed once per session; every fresh-round fetch reuses it. Retry
+    // rounds replay stored round objects and never fetch, so a queued miss
+    // stays owed regardless of the filter — that's deliberate.
+    roundQuery = buildScalesQuery();
     rounds = [];
+    retryQueue = [];
+    isRetry = false;
+    overtime = false;
     timeLeft = parseInt(timerLengthEl.value, 10) * 60;
     timerEl.textContent = formatTime(timeLeft);
     showScreen(exerciseScreen);
@@ -221,35 +262,71 @@
     nextRound();
   }
 
+  /** Pop the retry round due this turn, if any. Each nextRound() call is
+   *  one turn, so every queued entry counts down by 1 and the first entry
+   *  that reaches 0 (oldest first) is served. In overtime the delays are
+   *  moot — the queue just drains FIFO, back-to-back, with no fresh rounds
+   *  interleaved (the 2-turn gap is deliberately not preserved there:
+   *  overtime exists only to give pending retries their second chance). */
+  function takeDueRetry() {
+    if (retryQueue.length === 0) return null;
+    if (overtime) return retryQueue.shift();
+    retryQueue.forEach(function (e) { e.delay -= 1; });
+    for (var i = 0; i < retryQueue.length; i++) {
+      if (retryQueue[i].delay <= 0) return retryQueue.splice(i, 1)[0];
+    }
+    return null;
+  }
+
   function nextRound() {
+    if (overtime && retryQueue.length === 0) { endGame(); return; }
     phase = "loading";
     currentRound = null;
+    isRetry = false;
     correctBtn.disabled = true;
     incorrectBtn.disabled = true;
     hintEl.innerHTML = HINT_DEFAULT;
 
-    fetch("/api/round/")
+    var due = takeDueRetry();
+    if (due) {
+      // Re-asks render from the stored round object — no fetch, and no
+      // visual distinction from a fresh round.
+      isRetry = true;
+      presentRound(due.round);
+    } else {
+      fetchFreshRound();
+    }
+  }
+
+  function presentRound(round) {
+    currentRound = round;
+    // Header reads e.g. "C Major Pentatonic — E Shape · Descending" or
+    // "A Natural Minor Scale — 2nd Finger Form · Ascending";
+    // display_label carries the category-appropriate language.
+    roundKeyEl.textContent = round.key;
+    roundScaleEl.textContent = round.scale;
+    roundLabelEl.textContent = round.display_label;
+    roundDirectionEl.textContent = round.direction;
+    drawNeck(round.window_start); // UNFILLED (and unlabelled) until spacebar
+    drawTab(round); // staff visible, numbers hidden until spacebar
+    phase = "play";
+  }
+
+  function fetchFreshRound() {
+    fetch("/api/round/" + roundQuery)
       .then(function (resp) {
         if (!resp.ok) throw new Error("round fetch failed: " + resp.status);
         return resp.json();
       })
       .then(function (round) {
         if (phase !== "loading") return; // game may have ended meanwhile
-        currentRound = round;
-        // Header reads e.g. "C Major Pentatonic — E Shape · Descending" or
-        // "A Natural Minor Scale — 2nd Finger Form · Ascending";
-        // display_label carries the category-appropriate language.
-        roundKeyEl.textContent = round.key;
-        roundScaleEl.textContent = round.scale;
-        roundLabelEl.textContent = round.display_label;
-        roundDirectionEl.textContent = round.direction;
-        drawNeck(round.window_start); // UNFILLED (and unlabelled) until spacebar
-        drawTab(round); // staff visible, numbers hidden until spacebar
-        phase = "play";
+        presentRound(round);
       })
       .catch(function (err) {
         hintEl.textContent = "Could not load a round (" + err.message + "). Retrying…";
-        setTimeout(function () { if (phase === "loading") nextRound(); }, 1500);
+        // Retry the FETCH only — going back through nextRound() would
+        // decrement retryQueue delays again for the same turn.
+        setTimeout(function () { if (phase === "loading") fetchFreshRound(); }, 1500);
       });
   }
 
@@ -267,6 +344,7 @@
   function judge(correct) {
     if (phase !== "reveal" || !currentRound) return;
     var round = currentRound;
+    var wasRetry = isRetry; // nextRound() resets the flag before the POST fires
     rounds.push({
       form_id: round.form_id,
       form_name: round.form_name,
@@ -276,6 +354,11 @@
       direction: round.direction,
       correct: correct
     });
+
+    // A miss goes back in the queue and is re-asked two turns from now
+    // (and again after that if the retry also misses). The FULL round
+    // object is stored so the re-ask renders without a fetch.
+    if (!correct) retryQueue.push({ round: round, delay: 2 });
 
     // Logging stub endpoint. TODO(spaced repetition): this data will drive
     // round selection weighting server-side later.
@@ -290,7 +373,8 @@
         scale: round.scale,
         key: round.key,
         direction: round.direction,
-        correct: correct
+        correct: correct,
+        is_retry: wasRetry
       })
     }).catch(function () { /* logging is best-effort in v1 */ });
 
@@ -356,6 +440,10 @@
 
   // ---- Events ---------------------------------------------------------------
   startBtn.addEventListener("click", startGame);
+  exerciseChecks.forEach(function (c) {
+    c.addEventListener("change", updateStartState);
+  });
+  updateStartState(); // belt-and-braces vs. browser form-state restoration
   // The title is a home link: from any screen it abandons the session
   // (timer stopped, rounds discarded — no results) and shows the menu.
   appTitleEl.addEventListener("click", function () {

@@ -9,9 +9,38 @@ from . import spaced_repetition, theory
 from .models import AttemptLog
 
 
+def _exercise_groups():
+    """Group configured scales for the start-menu exercise picker.
+
+    "Scales" = the pentatonic + scale categories (full config names);
+    "Arpeggios" = the arpeggio category, with the redundant " Arpeggio"
+    suffix stripped for display. Config order is preserved within each
+    group; checkbox values are the raw scale ids (what /api/round/?scales=
+    accepts), so a new scale in scales.yaml appears here automatically.
+
+    Only scales with at least one loaded fingering form are offered:
+    scales.yaml still defines major/minor arpeggio, but their forms were
+    pruned in v3 (PLAN.md deferred: restore the full 41-form set) — a
+    checkbox that can never serve a round would be a lie.
+    """
+    playable = {form["scale"] for form in theory.load_fingerings().values()}
+    groups = [{"label": "Scales", "items": []},
+              {"label": "Arpeggios", "items": []}]
+    for scale_id, spec in theory.load_scales().items():
+        if scale_id not in playable:
+            continue
+        if spec["category"] == "arpeggio":
+            groups[1]["items"].append(
+                {"id": scale_id, "name": spec["name"].removesuffix(" Arpeggio")})
+        else:
+            groups[0]["items"].append({"id": scale_id, "name": spec["name"]})
+    return groups
+
+
 def index(request):
     """Single-page practice game."""
-    return render(request, "practice/index.html")
+    return render(request, "practice/index.html",
+                  {"exercise_groups": _exercise_groups()})
 
 
 @require_GET
@@ -25,6 +54,35 @@ def api_round(request):
     scales = theory.load_scales()
 
     form_ids = list(fingerings)
+    # Optional exercise filter: ?scales=major_pentatonic,minor7_arpeggio
+    # narrows the pool to forms of those scale ids. Absent -> all forms
+    # (exact pre-v5 behaviour). Empty tokens are dropped (a trailing comma
+    # is harmless); an effectively empty, unknown-id, or zero-form filter
+    # is a 400 — never a 500. (A valid id CAN have zero loaded forms:
+    # major/minor arpeggio are defined in scales.yaml but their forms were
+    # pruned in v3, which is also why _exercise_groups skips them.) Kept
+    # BEFORE all random draws: the key-spelling tests pin the exact
+    # random.* call sequence.
+    scales_param = request.GET.get("scales")
+    if scales_param is not None:
+        wanted = {s for s in scales_param.split(",") if s}
+        if not wanted:
+            return JsonResponse({"errors": {
+                "scales": "Must be a non-empty comma-separated list of "
+                          f"scale ids (known: {list(scales)}).",
+            }}, status=400)
+        unknown = sorted(wanted - set(scales))
+        if unknown:
+            return JsonResponse({"errors": {
+                "scales": f"Unknown scale id(s): {unknown} "
+                          f"(known: {list(scales)}).",
+            }}, status=400)
+        form_ids = [f for f in form_ids if fingerings[f]["scale"] in wanted]
+        if not form_ids:
+            return JsonResponse({"errors": {
+                "scales": "No playable forms for scale id(s): "
+                          f"{sorted(wanted)}.",
+            }}, status=400)
     # TODO(spaced repetition): next_round_weights() is a stub returning
     # uniform weights, so this is currently plain uniform random selection.
     # Later it will bias towards forms/keys the player keeps getting wrong.
@@ -79,6 +137,7 @@ def api_log(request):
     key = payload.get("key")
     direction = payload.get("direction")
     correct = payload.get("correct")
+    is_retry = payload.get("is_retry", False)
 
     if not isinstance(form_id, str) or form_id not in valid_forms:
         errors["form_id"] = f"Required; must be one of {list(valid_forms)}."
@@ -90,11 +149,14 @@ def api_log(request):
         errors["direction"] = f"Required; must be one of {theory.DIRECTIONS}."
     if not isinstance(correct, bool):
         errors["correct"] = "Required; must be a JSON boolean."
+    if not isinstance(is_retry, bool):
+        errors["is_retry"] = "Optional; must be a JSON boolean."
 
     if errors:
         return JsonResponse({"errors": errors}, status=400)
 
     log = AttemptLog.objects.create(
-        form_id=form_id, scale=scale, key=key, direction=direction, correct=correct
+        form_id=form_id, scale=scale, key=key, direction=direction,
+        correct=correct, is_retry=is_retry,
     )
     return JsonResponse({"status": "ok", "id": log.id}, status=201)

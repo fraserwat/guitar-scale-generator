@@ -16,6 +16,7 @@ class AttemptLog(models.Model):
     key = models.CharField(max_length=3)
     direction = models.CharField(max_length=16)
     correct = models.BooleanField()
+    is_retry = models.BooleanField(default=False)  # re-ask of a round just missed
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

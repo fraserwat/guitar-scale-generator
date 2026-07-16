@@ -5,13 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=10">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=13">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
     <!-- The title doubles as a home link: clicking it mid-game abandons
          the session and returns to the start menu (see app.js). -->
-    <h1 class="app-title" title="Back to menu">ScaleRunner</h1>
+    <!-- GBA-box-style wordmark: two-tone face over a thin hard extrude,
+         skewed forward for motion. Pure SVG text (system font stack, so
+         overflow stays visible as a metrics safety net across platforms). -->
+    <h1 class="app-title" title="Back to menu">
+      <svg class="logo" viewBox="0 0 236 40" width="236" height="40"
+           role="img" aria-label="ScaleRunner">
+        <g transform="skewX(-8)"
+           font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+           font-size="30" font-weight="800" letter-spacing="-0.5">
+          <text x="12" y="31" transform="translate(2 2)"
+                fill="#4b5568"><tspan>Scale</tspan><tspan fill="#a85f1a">Runner</tspan></text>
+          <text x="12" y="31" stroke="#0c0f14" stroke-width="1.5"
+                paint-order="stroke" fill="#f4f7fb"><tspan>Scale</tspan><tspan fill="#ffab4a">Runner</tspan></text>
+        </g>
+      </svg>
+    </h1>
 
     <!-- ============ Start screen ============ -->
     <section id="start-screen" class="screen">
@@ -26,12 +41,48 @@
           </select>
         </label>
 
-        <!-- TODO(7-string): enable this toggle and add 7-string tuning
-             (low B) support in theory.py + the SVG renderer. -->
-        <label class="field field-disabled" title="Coming soon">
-          <span class="field-label">7-String <span class="badge">coming soon</span></span>
-          <input type="checkbox" id="seven-string-toggle" disabled>
-        </label>
+        <!-- TODO(7-string): enable this segment and add 7-string tuning
+             (low B) support in theory.py + the SVG renderer. The game
+             logic ignores this control for now (6 is the only selectable
+             value). -->
+        <div class="field">
+          <span class="field-label">Strings</span>
+          <div class="seg-control" role="radiogroup" aria-label="Strings">
+            <input type="radio" class="seg-input" name="string-count"
+                   id="strings-6" value="6" autocomplete="off" checked>
+            <label class="seg-option" for="strings-6">6 String</label>
+            <input type="radio" class="seg-input" name="string-count"
+                   id="strings-7" value="7" autocomplete="off" disabled>
+            <label class="seg-option" for="strings-7" title="Coming soon">
+              <span class="seg-text">7 String<span class="seg-badge">soon</span></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Server-rendered from configs/scales.yaml (views._exercise_groups):
+             a new scale in the config appears here automatically. All boxes
+             checked on every load — deliberately no persistence. -->
+        <div class="field">
+          <span class="group-heading">Practice Exercises</span>
+          <div class="exercise-groups" id="exercise-groups">
+            {% for group in exercise_groups %}
+            <div class="exercise-group">
+              <h3 class="group-heading">{{ group.label }}</h3>
+              {% for item in group.items %}
+              <label class="exercise-option">
+                <input type="checkbox" class="exercise-checkbox"
+                       value="{{ item.id }}" autocomplete="off" checked>
+                <span class="exercise-box" aria-hidden="true"></span>
+                <span class="exercise-name">{{ item.name }}</span>
+              </label>
+              {% endfor %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <p id="exercise-hint" class="exercise-hint hidden" aria-live="polite">
+          Pick at least one exercise</p>
 
         <button id="start-btn" class="btn btn-primary">Start</button>
       </div>
@@ -123,6 +174,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=8"></script>
+  <script src="{% static 'practice/app.js' %}?v=10"></script>
 </body>
 </html>
