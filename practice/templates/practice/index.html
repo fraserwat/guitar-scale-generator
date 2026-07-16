@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=27">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=28">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -77,15 +77,23 @@
     <!-- ============ Start screen ============ -->
     <section id="start-screen" class="screen flow">
       <div class="panel">
-        <label class="field">
+        <div class="field">
           <span class="field-label">Timer length</span>
-          <select id="timer-length">
-            <option value="1">1 minute</option>
-            <option value="2">2 minutes</option>
-            <option value="5" selected>5 minutes</option>
-            <option value="10">10 minutes</option>
-          </select>
-        </label>
+          <div class="seg-control" role="radiogroup" aria-label="Timer length">
+            <input type="radio" class="seg-input" name="timer-length"
+                   id="timer-1" value="1" autocomplete="off">
+            <label class="seg-option" for="timer-1">1 min</label>
+            <input type="radio" class="seg-input" name="timer-length"
+                   id="timer-2" value="2" autocomplete="off">
+            <label class="seg-option" for="timer-2">2 min</label>
+            <input type="radio" class="seg-input" name="timer-length"
+                   id="timer-5" value="5" autocomplete="off" checked>
+            <label class="seg-option" for="timer-5">5 min</label>
+            <input type="radio" class="seg-input" name="timer-length"
+                   id="timer-10" value="10" autocomplete="off">
+            <label class="seg-option" for="timer-10">10 min</label>
+          </div>
+        </div>
 
         <!-- TODO(7-string): enable this segment and add 7-string tuning
              (low B) support in theory.py + the SVG renderer. The game
@@ -223,6 +231,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=14"></script>
+  <script src="{% static 'practice/app.js' %}?v=15"></script>
 </body>
 </html>

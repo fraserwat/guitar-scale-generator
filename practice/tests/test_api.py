@@ -30,7 +30,7 @@ class IndexPageTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         html = resp.content.decode()
         self.assertIn('id="start-screen"', html)
-        self.assertIn('id="timer-length"', html)
+        self.assertIn('aria-label="Timer length"', html)
         self.assertIn('id="start-btn"', html)
         # 7-string is still promised (hover hint on the disabled segment).
         self.assertIn('title="Coming soon"', html)
@@ -139,7 +139,7 @@ class IndexPageTests(TestCase):
     def test_index_panel_order(self):
         """Timer -> Strings -> Practice Exercises -> Start."""
         html = self.client.get("/").content.decode()
-        order = [html.index('id="timer-length"'),
+        order = [html.index('id="timer-1"'),
                  html.index('id="strings-6"'),
                  html.index("Practice Exercises"),
                  html.index('id="start-btn"')]

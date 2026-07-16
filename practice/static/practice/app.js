@@ -10,7 +10,6 @@
   var startScreen = document.getElementById("start-screen");
   var exerciseScreen = document.getElementById("exercise-screen");
   var resultsScreen = document.getElementById("results-screen");
-  var timerLengthEl = document.getElementById("timer-length");
   var startBtn = document.getElementById("start-btn");
   var exerciseChecks = Array.prototype.slice.call(
     document.querySelectorAll(".exercise-checkbox"));
@@ -285,7 +284,8 @@
     retryQueue = [];
     isRetry = false;
     overtime = false;
-    timeLeft = parseInt(timerLengthEl.value, 10) * 60;
+    timeLeft = parseInt(document.querySelector(
+      'input[name="timer-length"]:checked').value, 10) * 60;
     timerEl.textContent = formatTime(timeLeft);
     timerEl.classList.remove("timer-low");
     showScreen(exerciseScreen);
