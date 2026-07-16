@@ -251,6 +251,22 @@ body {
 
 .field > .group-heading { font-size: var(--text-sm); }
 
+/* The category sub-headers double as select-all/none toggles; hover
+   answers "is this clickable?" with the pointer and a colour lift
+   (colour-only, per the house rule). */
+.group-toggle {
+  all: unset;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.group-toggle:hover { color: var(--text); }
+
+.group-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .exercise-groups {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -408,7 +424,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .seg-option, .seg-thumb, .exercise-box, .exercise-name { transition: none; }
+  .seg-option, .seg-thumb, .exercise-box, .exercise-name,
+  .group-toggle { transition: none; }
   .app-title:hover .logo-shine-band { animation: none; }
   #start-btn:hover::after { animation: none; }
   .dialog-bubble, .bubble-shake, .timer-low { animation: none; }
@@ -583,13 +600,15 @@ button:disabled { cursor: not-allowed; }
 
 /* Answer cascade: each note pops in play order (--i from app.js), so
    the reveal itself draws the run's direction — ascending sweeps up,
-   descending sweeps down. */
+   descending sweeps down. The step (--cascade-step, set per round on
+   the dots/numbers group) shrinks with note count so every reveal
+   takes the same total time. */
 .cascade {
   opacity: 0;
   transform-box: fill-box;
   transform-origin: center;
   animation: note-in 160ms ease-out forwards;
-  animation-delay: calc(var(--i, 0) * 45ms);
+  animation-delay: calc(var(--i, 0) * var(--cascade-step, 45ms));
 }
 
 /* Both ends explicit: the implicit "to" would inherit the base
@@ -611,6 +630,14 @@ kbd {
 }
 
 .judge-buttons { display: flex; gap: 1.25rem; }
+
+/* The most-pressed controls in the app get hero targets (Fitts's law):
+   the pair splits the full column, edges aligned with the diagrams
+   above, at the same height as Start. */
+.judge-buttons .btn {
+  flex: 1 1 0;
+  padding-block: 0.85rem;
+}
 
 /* Muted inline hint text (the start-menu keyboard tip). */
 .hint {

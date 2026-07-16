@@ -9,7 +9,7 @@
         as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{% static 'practice/fonts/archivo-var-latin.woff2' %}"
         as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=34">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=35">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -128,7 +128,11 @@
           <div class="exercise-groups">
             {% for group in exercise_groups %}
             <div class="exercise-group">
-              <h3 class="group-heading">{{ group.label }}</h3>
+              <!-- The header is a select-all/none toggle for its group. -->
+              <h3 class="group-heading">
+                <button type="button" class="group-toggle"
+                        title="Toggle all">{{ group.label }}</button>
+              </h3>
               {% for item in group.items %}
               <label class="exercise-option">
                 <input type="checkbox" class="exercise-checkbox"
@@ -247,6 +251,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=17"></script>
+  <script src="{% static 'practice/app.js' %}?v=18"></script>
 </body>
 </html>

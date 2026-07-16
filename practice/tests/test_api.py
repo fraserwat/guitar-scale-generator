@@ -92,8 +92,8 @@ class IndexPageTests(TestCase):
         """Scales group (pentatonic + scale categories) before Arpeggios;
         names in config order within each group."""
         html = self.client.get("/").content.decode()
-        scales_at = html.index(">Scales</h3>")
-        arps_at = html.index(">Arpeggios</h3>")
+        scales_at = html.index(">Scales</button>")
+        arps_at = html.index(">Arpeggios</button>")
         self.assertLess(scales_at, arps_at)
         playable = self.playable_scale_ids()
         last = scales_at

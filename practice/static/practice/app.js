@@ -46,9 +46,11 @@
     ? "Play it, then tap the diagram to reveal!"
     : "Play it, then press <kbd>SPACE</kbd> to reveal!";
   var REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
-  // Keep in sync with .cascade in style.css (delay step / pop length).
-  var CASCADE_STEP_MS = 45;
-  var CASCADE_POP_MS = 160;
+  // Every reveal takes the same total time regardless of note count:
+  // the per-note delay step is derived per round (see cascadeStep) and
+  // handed to .cascade via --cascade-step.
+  var CASCADE_TOTAL_MS = 420;
+  var CASCADE_POP_MS = 160; // keep in sync with .cascade's animation length
 
   // ---- State --------------------------------------------------------------
   var phase = "idle"; // idle | loading | play | revealing | reveal | results
@@ -99,6 +101,13 @@
     return (span === 4 && round.window_start > 1)
       ? round.window_start - 1
       : round.window_start;
+  }
+
+  /** Per-note stagger so the whole cascade always spans
+   *  CASCADE_TOTAL_MS, however many notes the run has. */
+  function cascadeStep(noteCount) {
+    if (noteCount < 2) return 0;
+    return (CASCADE_TOTAL_MS - CASCADE_POP_MS) / (noteCount - 1);
   }
 
   /** The wordmark's glossy shine-line fill at dot scale: lighter upper
@@ -173,7 +182,10 @@
   function drawNotes(round) {
     var start = viewStart(round);
     var last = round.notes.length - 1;
-    var dots = el("g", { id: "note-dots" });
+    var dots = el("g", {
+      id: "note-dots",
+      style: "--cascade-step:" + cascadeStep(round.notes.length) + "ms"
+    });
     round.notes.forEach(function (note, idx) {
       var cx = NECK.left + (note.fret - start + 0.5) * NECK.fretW;
       var cy = stringY(note.string);
@@ -221,7 +233,11 @@
     var seq = round.notes.slice();
     if (round.direction === "Descending") seq.reverse();
 
-    var numbers = el("g", { id: "tab-numbers", display: "none" });
+    var numbers = el("g", {
+      id: "tab-numbers",
+      display: "none",
+      style: "--cascade-step:" + cascadeStep(seq.length) + "ms"
+    });
     var colW = (TAB.right - TAB.left - 10) / seq.length;
     seq.forEach(function (note, idx) {
       // seq is already in play order, so the cascade index is just idx
@@ -429,9 +445,7 @@
     drawNotes(currentRound);
     revealFretLabels();
     revealTabNumbers();
-    var wait = REDUCED_MOTION.matches
-      ? 0
-      : (currentRound.notes.length - 1) * CASCADE_STEP_MS + CASCADE_POP_MS;
+    var wait = REDUCED_MOTION.matches ? 0 : CASCADE_TOTAL_MS;
     setTimeout(function () {
       if (phase !== "revealing") return; // home click may have interrupted
       correctBtn.disabled = false;
@@ -541,6 +555,22 @@
   exerciseChecks.forEach(function (c) {
     c.addEventListener("change", updateStartState);
   });
+  // Category sub-headers toggle their whole group: everything on,
+  // unless everything already is — then everything off.
+  Array.prototype.forEach.call(
+    document.querySelectorAll(".group-toggle"), function (btn) {
+      btn.addEventListener("click", function () {
+        var boxes = btn.closest(".exercise-group")
+          .querySelectorAll(".exercise-checkbox");
+        var allChecked = Array.prototype.every.call(boxes, function (b) {
+          return b.checked;
+        });
+        Array.prototype.forEach.call(boxes, function (b) {
+          b.checked = !allChecked;
+        });
+        updateStartState();
+      });
+    });
   updateStartState(); // belt-and-braces vs. browser form-state restoration
   // Poking the locked Start (clicks pass through it via CSS
   // pointer-events) wiggles the dialog bubble for emphasis.
