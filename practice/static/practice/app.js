@@ -16,13 +16,14 @@
   var exerciseHintEl = document.getElementById("exercise-hint");
   var startWrapEl = document.getElementById("start-wrap");
   var timerEl = document.getElementById("timer");
+  var roundCountEl = document.getElementById("round-count");
   var roundKeyEl = document.getElementById("round-key");
   var roundScaleEl = document.getElementById("round-scale");
   var roundDirectionEl = document.getElementById("round-direction");
   var roundLabelEl = document.getElementById("round-label");
   var neckSvg = document.getElementById("neck");
   var tabSvg = document.getElementById("tab");
-  var hintEl = document.getElementById("hint");
+  var neckBubbleEl = document.getElementById("neck-bubble");
   var correctBtn = document.getElementById("correct-btn");
   var incorrectBtn = document.getElementById("incorrect-btn");
   var resultsSummaryEl = document.getElementById("results-summary");
@@ -38,14 +39,24 @@
   var resultsListIncorrectEl = document.getElementById("results-list-incorrect");
   var againBtn = document.getElementById("again-btn");
 
-  // Server-rendered hint markup (index.html), restored at each new round.
-  var HINT_DEFAULT = hintEl.innerHTML;
+  // Touch-first devices have no spacebar, so the coaching bubble (and
+  // the tap-to-reveal affordance) speaks their language.
+  var COARSE_POINTER = window.matchMedia("(pointer: coarse)").matches;
+  var REVEAL_HINT = COARSE_POINTER
+    ? "Play it, then tap the diagram to reveal!"
+    : "Play it, then press <kbd>SPACE</kbd> to reveal!";
+  var REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
+  // Keep in sync with .cascade in style.css (delay step / pop length).
+  var CASCADE_STEP_MS = 45;
+  var CASCADE_POP_MS = 160;
 
   // ---- State --------------------------------------------------------------
-  var phase = "idle"; // idle | loading | play | reveal | results
+  var phase = "idle"; // idle | loading | play | revealing | reveal | results
   var timeLeft = 0;
   var timerId = null;
   var currentRound = null;
+  var roundNum = 0;
+  var revealHintDone = false; // round-1 coaching bubble shown+dismissed?
   var rounds = [];
   var retryQueue = []; // [{round, delay}] — failed rounds due again in `delay` turns
   var isRetry = false; // is currentRound a re-ask of a missed round?
@@ -155,16 +166,24 @@
     if (labels) labels.removeAttribute("display");
   }
 
-  /** Fill the neck with the round's note dots (roots highlighted). */
+  /** Fill the neck with the round's note dots (roots highlighted).
+   *  Each dot pops in play order (.cascade + --i), so the reveal itself
+   *  draws the run's direction: notes arrive ascending, so Descending
+   *  just reverses the stagger index. */
   function drawNotes(round) {
     var start = viewStart(round);
+    var last = round.notes.length - 1;
     var dots = el("g", { id: "note-dots" });
-    round.notes.forEach(function (note) {
+    round.notes.forEach(function (note, idx) {
       var cx = NECK.left + (note.fret - start + 0.5) * NECK.fretW;
       var cy = stringY(note.string);
-      var dot = note.is_root
-        ? el("circle", { cx: cx, cy: cy, r: 10, "class": "root" })
-        : el("circle", { cx: cx, cy: cy, r: 9, "class": "note-dot" });
+      var order = round.direction === "Descending" ? last - idx : idx;
+      var dot = el("circle", {
+        cx: cx, cy: cy,
+        r: note.is_root ? 10 : 9,
+        "class": (note.is_root ? "root" : "note-dot") + " cascade",
+        style: "--i:" + order
+      });
       dot.appendChild(el("title", {}, note.note_name));
       dots.appendChild(dot);
     });
@@ -205,10 +224,15 @@
     var numbers = el("g", { id: "tab-numbers", display: "none" });
     var colW = (TAB.right - TAB.left - 10) / seq.length;
     seq.forEach(function (note, idx) {
+      // seq is already in play order, so the cascade index is just idx
+      // (mask + number pop together, hence the per-note group). The
+      // cascade class itself is added at reveal time — see
+      // revealTabNumbers.
+      var noteG = el("g", { style: "--i:" + idx });
       var cx = TAB.left + 10 + (idx + 0.5) * colW;
       var cy = tabY(note.string);
       // Mask the staff line behind the number (conventional TAB look).
-      numbers.appendChild(el("rect", {
+      noteG.appendChild(el("rect", {
         x: cx - 8, y: cy - 7, width: 16, height: 14, "class": "tab-mask"
       }));
       var num = el("text", {
@@ -216,15 +240,23 @@
       }, String(note.fret));
       if (note.is_root) num.setAttribute("class", "tab-num root");
       num.appendChild(el("title", {}, note.note_name));
-      numbers.appendChild(num);
+      noteG.appendChild(num);
+      numbers.appendChild(noteG);
     });
     tabSvg.appendChild(numbers);
   }
 
-  /** Unhide the TAB numbers (answer phase only). */
+  /** Unhide the TAB numbers (answer phase only). The cascade class is
+   *  applied only now: Chrome runs CSS animations even under
+   *  display:none, so a class set at draw time would have finished
+   *  before the unhide. */
   function revealTabNumbers() {
     var numbers = tabSvg.querySelector("#tab-numbers");
-    if (numbers) numbers.removeAttribute("display");
+    if (!numbers) return;
+    Array.prototype.forEach.call(numbers.children, function (noteG) {
+      noteG.classList.add("cascade");
+    });
+    numbers.removeAttribute("display");
   }
 
   // ---- Screens & timer ------------------------------------------------------
@@ -274,8 +306,23 @@
     exerciseHintEl.classList.toggle("hidden", any);
   }
 
+  // ---- Round-1 coaching bubble ---------------------------------------------
+  // The reveal instruction floats over the empty neck on the session's
+  // first round only; once the player reveals once, they know the move.
+  // The bubble doubles as the fetch-error notice (textContent path).
+  function showNeckBubble(html) {
+    neckBubbleEl.innerHTML = html;
+    neckBubbleEl.classList.remove("hidden");
+  }
+
+  function hideNeckBubble() {
+    neckBubbleEl.classList.add("hidden");
+  }
+
   // ---- Game flow ------------------------------------------------------------
   function startGame() {
+    roundNum = 0;
+    revealHintDone = false;
     // Computed once per session; every fresh-round fetch reuses it. Retry
     // rounds replay stored round objects and never fetch, so a queued miss
     // stays owed regardless of the filter — that's deliberate.
@@ -317,7 +364,6 @@
     isRetry = false;
     correctBtn.disabled = true;
     incorrectBtn.disabled = true;
-    hintEl.innerHTML = HINT_DEFAULT;
 
     var due = takeDueRetry();
     if (due) {
@@ -332,6 +378,8 @@
 
   function presentRound(round) {
     currentRound = round;
+    roundNum += 1;
+    roundCountEl.textContent = "Round " + roundNum;
     // Header reads e.g. "C Major Pentatonic — E Shape · Descending" or
     // "A Natural Minor Scale — 2nd Finger Form · Ascending";
     // display_label carries the category-appropriate language.
@@ -339,8 +387,12 @@
     roundScaleEl.textContent = round.scale;
     roundLabelEl.textContent = round.display_label;
     roundDirectionEl.textContent = round.direction;
-    drawNeck(viewStart(round)); // UNFILLED (and unlabelled) until spacebar
-    drawTab(round); // staff visible, numbers hidden until spacebar
+    drawNeck(viewStart(round)); // UNFILLED (and unlabelled) until reveal
+    drawTab(round); // staff visible, numbers hidden until reveal
+    neckSvg.classList.add("revealable");
+    tabSvg.classList.add("revealable");
+    if (revealHintDone) hideNeckBubble();
+    else showNeckBubble(REVEAL_HINT);
     phase = "play";
   }
 
@@ -355,21 +407,36 @@
         presentRound(round);
       })
       .catch(function (err) {
-        hintEl.textContent = "Could not load a round (" + err.message + "). Retrying…";
+        neckBubbleEl.textContent =
+          "Could not load a round (" + err.message + "). Retrying…";
+        neckBubbleEl.classList.remove("hidden");
         // Retry the FETCH only — going back through nextRound() would
         // decrement retryQueue delays again for the same turn.
         setTimeout(function () { if (phase === "loading") fetchFreshRound(); }, 1500);
       });
   }
 
+  /** Show the answer. The judge controls arm when the cascade lands —
+   *  "revealing" blocks re-triggering and early ,/. presses meanwhile. */
   function reveal() {
     if (phase !== "play" || !currentRound) return;
+    phase = "revealing";
+    revealHintDone = true;
+    hideNeckBubble();
+    neckSvg.classList.remove("revealable");
+    tabSvg.classList.remove("revealable");
     drawNotes(currentRound);
     revealFretLabels();
     revealTabNumbers();
-    correctBtn.disabled = false;
-    incorrectBtn.disabled = false;
-    phase = "reveal";
+    var wait = REDUCED_MOTION.matches
+      ? 0
+      : (currentRound.notes.length - 1) * CASCADE_STEP_MS + CASCADE_POP_MS;
+    setTimeout(function () {
+      if (phase !== "revealing") return; // home click may have interrupted
+      correctBtn.disabled = false;
+      incorrectBtn.disabled = false;
+      phase = "reveal";
+    }, wait);
   }
 
   function judge(correct) {
@@ -494,6 +561,10 @@
     phase = "idle";
     showScreen(startScreen);
   });
+  // Tapping either diagram reveals — the touch path (no spacebar on a
+  // music stand); reveal() itself ignores every phase but "play".
+  neckSvg.addEventListener("click", reveal);
+  tabSvg.addEventListener("click", reveal);
   correctBtn.addEventListener("click", function (e) {
     e.currentTarget.blur();
     judge(true);

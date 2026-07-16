@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=31">
+  <link rel="preload" href="{% static 'practice/fonts/baloo2-800-latin.woff2' %}"
+        as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=32">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -154,7 +156,10 @@
     <!-- ============ Exercise screen ============ -->
     <section id="exercise-screen" class="screen flow hidden">
       <div class="exercise-top">
-        <div id="timer" class="timer">5:00</div>
+        <div>
+          <div id="timer" class="timer">5:00</div>
+          <div id="round-count" class="round-count">Round 1</div>
+        </div>
         <div class="round-header">
           <!-- e.g. "C Major Pentatonic — E Shape · Descending"
                 or  "A Natural Minor Scale — 2nd Finger Form · Ascending" -->
@@ -171,16 +176,20 @@
       </div>
 
       <!-- Root notes are filled orange, plain scale notes outlined — no
-           legend needed; that convention is intuitive to guitarists. -->
-      <svg id="neck" class="neck" viewBox="0 0 560 240" role="img"
-           aria-label="Guitar neck diagram"></svg>
+           legend needed; that convention is intuitive to guitarists.
+           The wrapper anchors the round-1 coaching bubble over the
+           (empty) grid; app.js hides it after the first reveal. -->
+      <div class="neck-wrap">
+        <svg id="neck" class="neck" viewBox="0 0 560 240" role="img"
+             aria-label="Guitar neck diagram"></svg>
+        <p id="neck-bubble" class="dialog-bubble dialog-bubble--neck hidden"
+           aria-live="polite"></p>
+      </div>
 
       <!-- TAB of the round's run: staff drawn immediately, numbers hidden
            until the answer reveal (they'd give the position away). -->
       <svg id="tab" class="tab" viewBox="0 0 560 130" role="img"
            aria-label="Tablature"></svg>
-
-      <p id="hint" class="hint">Play the scale, then press <kbd>SPACE</kbd> to reveal the notes.</p>
 
       <div class="judge-buttons">
         <button id="correct-btn" class="btn btn-correct" disabled>&#10003; Correct</button>
@@ -189,9 +198,11 @@
     </section>
 
     <!-- ============ Results screen ============ -->
-    <!-- Summary card first, then rounds grouped by outcome ("Correct" /
-         "Needs work"). app.js fills the counts + lists and hides any empty
-         group (and the whole summary card when no rounds were played). -->
+    <!-- Summary card first, then rounds grouped by outcome. "Needs work"
+         leads: those rows are the actionable payload (the summary card
+         above already celebrates the wins). app.js fills the counts +
+         lists and hides any empty group (and the whole summary card when
+         no rounds were played). -->
     <section id="results-screen" class="screen flow hidden">
       <h2 class="results-heading">Session results</h2>
 
@@ -212,15 +223,6 @@
         No rounds completed — try a longer timer next time.
       </p>
 
-      <section id="results-group-correct" class="results-group results-group-correct hidden">
-        <h3 class="group-heading results-group-title">
-          <span class="results-dot results-dot-correct" aria-hidden="true"></span>
-          Correct
-          <span id="results-count-correct" class="results-count">0</span>
-        </h3>
-        <ul id="results-list-correct" class="results-list"></ul>
-      </section>
-
       <section id="results-group-incorrect" class="results-group results-group-incorrect hidden">
         <h3 class="group-heading results-group-title">
           <span class="results-dot results-dot-incorrect" aria-hidden="true"></span>
@@ -230,10 +232,19 @@
         <ul id="results-list-incorrect" class="results-list"></ul>
       </section>
 
+      <section id="results-group-correct" class="results-group results-group-correct hidden">
+        <h3 class="group-heading results-group-title">
+          <span class="results-dot results-dot-correct" aria-hidden="true"></span>
+          Correct
+          <span id="results-count-correct" class="results-count">0</span>
+        </h3>
+        <ul id="results-list-correct" class="results-list"></ul>
+      </section>
+
       <button id="again-btn" class="btn btn-primary">Practice again</button>
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=15"></script>
+  <script src="{% static 'practice/app.js' %}?v=16"></script>
 </body>
 </html>

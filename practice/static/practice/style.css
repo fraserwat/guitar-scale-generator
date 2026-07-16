@@ -1,6 +1,17 @@
 /* ScaleRunner — dark theme (high-contrast: text/controls aim for
    WCAG AA against the background). */
 
+/* Display face for the game surfaces (wordmark, headings, timer,
+   buttons); body text stays on the system stack. Self-hosted so the
+   wordmark's metrics stop drifting across platforms. */
+@font-face {
+  font-family: "Baloo 2";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("fonts/baloo2-800-latin.woff2") format("woff2");
+}
+
 :root {
   --bg: #0c0f14;
   --panel: #161b23;
@@ -23,6 +34,8 @@
   --extrude-red: #a83833;
   --extrude-grey: #333d4d;
 
+  --display-font: "Baloo 2", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
   /* Type ramp — every UI font size comes from here (the seg-badge's
      0.6rem micro size is the one deliberate exception). */
   --text-xs: 0.75rem;
@@ -38,6 +51,8 @@
 body {
   margin: 0;
   min-height: 100svh;
+  user-select: none;          /* stray drags highlight the UI and break the look */
+  -webkit-user-select: none;  /* Safari */
   display: flex;
   flex-direction: column;
   background: var(--bg);
@@ -72,15 +87,19 @@ body {
 .app-title {
   margin: 0 0 1rem;
   cursor: pointer;
-  user-select: none;
   width: fit-content;  /* only the wordmark is the home-link click target */
   line-height: 0;      /* no phantom baseline gap under the inline svg */
 }
 
 .app-title svg {
-  overflow: visible;   /* system-font metrics vary; never clip the mark */
+  overflow: visible;   /* fallback-font metrics vary; never clip the mark */
   filter: drop-shadow(0 0 8px rgba(255, 171, 74, 0.18)); /* resting glow */
 }
+
+/* CSS outranks the SVG's presentation attributes, so this covers the
+   face text AND the clip-path lettering (they must use one font or the
+   shine band drifts off the glyphs). */
+.logo text { font-family: var(--display-font); }
 
 /* Shine sweep across the wordmark, once per hover. */
 .app-title:hover .logo-shine-band {
@@ -208,6 +227,7 @@ body {
 
 /* ---- Practice Exercises picker ---- */
 .group-heading {
+  font-family: var(--display-font);
   font-size: var(--text-xs);
   font-weight: 600;
   text-transform: uppercase;
@@ -300,12 +320,14 @@ body {
   position: absolute;
   bottom: calc(100% + 12px);
   left: 50%;
-  transform: translateX(-50%);
+  --bubble-xform: translateX(-50%); /* placement variants override */
+  transform: var(--bubble-xform);
   z-index: 1;
   margin: 0;
   padding: 0.55rem 1rem;
   background: var(--panel);
   color: var(--text);
+  font-family: var(--display-font);
   font-size: var(--text-sm);
   font-weight: 700;
   white-space: nowrap;
@@ -338,8 +360,20 @@ body {
 }
 
 @keyframes bubble-in {
-  from { opacity: 0; transform: translateX(-50%) scale(0.9); }
+  from { opacity: 0; transform: var(--bubble-xform) scale(0.9); }
 }
+
+/* Round-1 coaching bubble floats in the (empty) neck grid; the tail
+   points at the diagram it's talking about. Gone after first reveal.
+   pointer-events: none so the tap it invites lands on the neck under it. */
+.dialog-bubble--neck {
+  bottom: auto;
+  top: 42%;
+  --bubble-xform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.neck-wrap { position: relative; }
 
 /* Wiggle when the locked Start is poked (app.js re-adds the class). */
 .bubble-shake { animation: bubble-shake 300ms ease; }
@@ -362,6 +396,7 @@ body {
   .app-title:hover .logo-shine-band { animation: none; }
   #start-btn:hover::after { animation: none; }
   .dialog-bubble, .bubble-shake, .timer-low { animation: none; }
+  .cascade { animation: none; opacity: 1; }
 }
 
 button:not(:disabled) { cursor: pointer; }
@@ -371,6 +406,7 @@ button:disabled { cursor: not-allowed; }
    colours (background/text/border-colour/--extrude) so a state flip
    can never change a button's size. */
 .btn {
+  font-family: var(--display-font);
   font-size: var(--text-md);
   font-weight: 700;
   padding: 0.6rem 1.4rem;
@@ -457,9 +493,16 @@ button:disabled { cursor: not-allowed; }
 }
 
 .timer {
+  font-family: var(--display-font);
   font-size: var(--text-xl);
   font-variant-numeric: tabular-nums;
   color: var(--text);
+}
+
+/* System-status whisper under the timer (Round 1, Round 2, …). */
+.round-count {
+  font-size: var(--text-sm);
+  color: var(--muted);
 }
 
 /* Final 30 seconds: the countdown ignites. */
@@ -490,9 +533,13 @@ button:disabled { cursor: not-allowed; }
   border-radius: 10px;
 }
 
+/* During the question phase the diagrams are tap targets (touch has no
+   spacebar); the pointer says so. */
+.neck.revealable, .tab.revealable { cursor: pointer; }
+
 /* Extra rhythm after the extruded boxes (the 6px extrude eats into the
    perceived gap below them). */
-.tab, .hint { --flow-space: 1.5rem; }
+.tab, .judge-buttons { --flow-space: 1.5rem; }
 
 /* SVG paint (app.js only sets geometry + classes). */
 .neck .fret-line { stroke: var(--line); }
@@ -517,7 +564,24 @@ button:disabled { cursor: not-allowed; }
 }
 .tab .root { fill: var(--accent); font-weight: 700; }
 
-.hint { color: var(--muted); font-size: var(--text-sm); }
+/* Answer cascade: each note pops in play order (--i from app.js), so
+   the reveal itself draws the run's direction — ascending sweeps up,
+   descending sweeps down. */
+.cascade {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: note-in 160ms ease-out forwards;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+/* Both ends explicit: the implicit "to" would inherit the base
+   opacity: 0 and the pop would land invisible. */
+@keyframes note-in {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 /* Keycaps with their own tiny extrude — pressable-looking. */
 kbd {
   background: var(--panel);
@@ -531,7 +595,7 @@ kbd {
 
 .judge-buttons { display: flex; gap: 1.25rem; }
 
-/* Keyboard-shorthand tip on the start menu; sized like .hint. */
+/* Keyboard-shorthand tip on the start menu. */
 .keyboard-tip {
   --flow-space: 1.5rem; /* clears the panel's extrude */
   font-size: var(--text-sm);
@@ -548,6 +612,7 @@ kbd {
 .results-summary { --flow-space: 1rem; }
 
 .results-heading {
+  font-family: var(--display-font);
   font-size: var(--text-lg);
   font-weight: 600;
 }
@@ -567,6 +632,7 @@ kbd {
 }
 
 .results-score {
+  font-family: var(--display-font);
   font-size: var(--text-2xl);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -580,10 +646,13 @@ kbd {
 }
 
 .results-pct {
+  font-family: var(--display-font);
   font-size: var(--text-2xl);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  /* Green, not accent: it summarises the correct-ratio bar below it —
+     same datum, same encoding. */
+  color: var(--green);
 }
 
 /* Correct-ratio bar; app.js sets the fill width to the percentage. */
