@@ -51,6 +51,10 @@
   // handed to .cascade via --cascade-step.
   var CASCADE_TOTAL_MS = 420;
   var CASCADE_POP_MS = 160; // keep in sync with .cascade's animation length
+  // Unrelated rounds between a miss and its re-ask. takeDueRetry()
+  // decrements before checking due, so this must be intervening-rounds + 1
+  // (delay 3 -> 2 other rounds play, then the retry lands on the 3rd turn).
+  var RETRY_GAP_ROUNDS = 3;
 
   // ---- State --------------------------------------------------------------
   var phase = "idle"; // idle | loading | play | revealing | reveal | results
@@ -362,8 +366,9 @@
    *  one turn, so every queued entry counts down by 1 and the first entry
    *  that reaches 0 (oldest first) is served. In overtime the delays are
    *  moot — the queue just drains FIFO, back-to-back, with no fresh rounds
-   *  interleaved (the 2-turn gap is deliberately not preserved there:
-   *  overtime exists only to give pending retries their second chance). */
+   *  interleaved (the RETRY_GAP_ROUNDS gap is deliberately not preserved
+   *  there: overtime exists only to give pending retries their second
+   *  chance before the session ends). */
   function takeDueRetry() {
     if (retryQueue.length === 0) return null;
     if (overtime) return retryQueue.shift();
@@ -468,10 +473,10 @@
       correct: correct
     });
 
-    // A miss goes back in the queue and is re-asked two turns from now
-    // (and again after that if the retry also misses). The FULL round
-    // object is stored so the re-ask renders without a fetch.
-    if (!correct) retryQueue.push({ round: round, delay: 2 });
+    // A miss goes back in the queue and is re-asked after RETRY_GAP_ROUNDS-1
+    // unrelated rounds (and again after that if the retry also misses). The
+    // FULL round object is stored so the re-ask renders without a fetch.
+    if (!correct) retryQueue.push({ round: round, delay: RETRY_GAP_ROUNDS });
 
     // Best-effort attempt log — a failed POST never blocks the game.
     fetch("/api/log/", {
