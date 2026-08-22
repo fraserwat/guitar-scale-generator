@@ -1,0 +1,13 @@
+# User-drawn D-root voicing, key A. Bass = C (minor 3rd) on D string.
+id: minor7b5-chord-d-root-1st-inv
+scale: minor7b5_chord_1st_inv   # scale id from ../../scales.yaml
+name: "Minor 7b5 — 1st Inversion (D-root)"
+anchor: root_low_d
+example_key: A
+tab:
+  E: []
+  A: []
+  D: [10]
+  G: [12]
+  B: [10]
+  e: [11]

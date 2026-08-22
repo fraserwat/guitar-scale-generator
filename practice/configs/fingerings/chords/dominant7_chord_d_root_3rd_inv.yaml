@@ -1,0 +1,13 @@
+# User-drawn D-root voicing, key A. Bass = G (minor 7th) on D string.
+id: dominant7-chord-d-root-3rd-inv
+scale: dominant7_chord_3rd_inv   # scale id from ../../scales.yaml
+name: "Dominant 7 — 3rd Inversion (D-root)"
+anchor: root_low_d
+example_key: A
+tab:
+  E: []
+  A: []
+  D: [5]
+  G: [6]
+  B: [5]
+  e: [5]
