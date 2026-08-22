@@ -108,9 +108,17 @@ STRING_BASE_SEMITONES = {6: 0, 5: 5, 4: 10, 3: 15, 2: 19, 1: 24}
 #   scale/arpeggio forms  -> finger forms ("2nd Finger Form"; the arpeggio
 #                            forms are derived from the same-finger scale
 #                            forms, so they share the finger-form language)
-CATEGORIES = ("pentatonic", "arpeggio", "scale")
+#   chord forms            -> inversion labels ("E Root (1st Inversion)");
+#                            a chord-category scale carries one specific
+#                            inversion (0 = root position), unlike arpeggio
+#                            scales which are always root position
+CATEGORIES = ("pentatonic", "arpeggio", "scale", "chord")
 CAGED_CATEGORIES = ("pentatonic",)
 CAGED_SHAPES = ("C", "A", "G", "E", "D")
+
+# Chord-category scales pick which menu row ("Core Diatonic" vs "Altered")
+# they're offered under on the start screen.
+MENU_GROUPS = ("core_diatonic", "altered")
 
 
 class ConfigError(ValueError):
@@ -275,10 +283,46 @@ def load_scales(path: str | Path | None = None) -> Mapping[str, dict]:
                 f"{path}: scale {scale_id!r} 'category' must be one of "
                 f"{CATEGORIES}, got {category!r}"
             )
+
+        # Chord-category scales carry two extra fields that fingering forms
+        # of that scale read: which chord tone is the bass note (inversion,
+        # 0 = root position up to 3 = the highest of a 4-note chord) and
+        # which menu row it belongs to. Both are forbidden elsewhere so a
+        # stray field on the wrong category fails loudly rather than being
+        # silently ignored.
+        inversion = spec.get("inversion")
+        menu_group = spec.get("menu_group")
+        if category == "chord":
+            if not isinstance(inversion, int) or not 0 <= inversion <= len(intervals) - 1:
+                raise ConfigError(
+                    f"{path}: scale {scale_id!r} 'inversion' is required for "
+                    f"category 'chord' and must be an int 0-{len(intervals) - 1} "
+                    f"(one of the chord's own intervals), got {inversion!r}"
+                )
+            if menu_group not in MENU_GROUPS:
+                raise ConfigError(
+                    f"{path}: scale {scale_id!r} 'menu_group' is required for "
+                    f"category 'chord' and must be one of {MENU_GROUPS}, "
+                    f"got {menu_group!r}"
+                )
+        else:
+            if "inversion" in spec:
+                raise ConfigError(
+                    f"{path}: scale {scale_id!r} 'inversion' is forbidden for "
+                    f"category {category!r} (only 'chord' scales have inversions)"
+                )
+            if "menu_group" in spec:
+                raise ConfigError(
+                    f"{path}: scale {scale_id!r} 'menu_group' is forbidden for "
+                    f"category {category!r} (only 'chord' scales have a menu_group)"
+                )
+
         scales[scale_id] = {
             "name": name,
             "intervals": list(intervals),
             "category": category,
+            "inversion": inversion,
+            "menu_group": menu_group,
         }
     return MappingProxyType(scales)
 
@@ -335,6 +379,8 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
     # Category-dependent label field:
     #   pentatonic      -> caged_shape (C|A|G|E|D), starting_finger forbidden
     #   scale/arpeggio  -> starting_finger (1-4), caged_shape forbidden
+    #   chord           -> neither; the label comes from the scale's own
+    #                      'inversion' (see load_scales), both forbidden here
     caged_shape = raw.get("caged_shape")
     starting_finger = raw.get("starting_finger")
     if category in CAGED_CATEGORIES:
@@ -350,6 +396,20 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
             )
         starting_finger = None
         display_label = f"{caged_shape} Shape"
+    elif category == "chord":
+        if "caged_shape" in raw:
+            raise ConfigError(
+                f"{path}: 'caged_shape' is forbidden for category 'chord'"
+            )
+        if "starting_finger" in raw:
+            raise ConfigError(
+                f"{path}: 'starting_finger' is forbidden for category "
+                f"'chord' (the inversion comes from the scale, not the form)"
+            )
+        caged_shape = None
+        starting_finger = None
+        inversion = scales[scale_id]["inversion"]
+        display_label = f"{root_label} Root ({ordinal(inversion)} Inversion)"
     else:  # category in ("scale", "arpeggio")
         if "caged_shape" in raw:
             raise ConfigError(
@@ -402,28 +462,56 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
             f"(max {WINDOW_SIZE}): frets {min(all_frets)}..{max(all_frets)}"
         )
 
-    # The root must appear on the anchor string — that is what transposition
-    # anchors on, so it holds for every category. The stricter "start on the
-    # root" convention (no note sounds below it) applies only to scale and
-    # arpeggio finger forms; pentatonic CAGED boxes span the whole position
-    # and may play below the root.
-    if example_anchor not in tab[root_label]:
-        raise ConfigError(
-            f"{path}: the root ({EXAMPLE_KEY} at fret {example_anchor}) must "
-            f"appear on string {root_label} — the anchor string carries the root"
+    # Non-chord categories: root must sound at example_anchor, nothing below
+    # it (CAGED boxes exempt from the "nothing below" part). Chord
+    # categories: anchor string carries this inversion's bass note instead
+    # of the root, nothing below *that*.
+    if category == "chord":
+        inversion = scales[scale_id]["inversion"]
+        chord_intervals = scales[scale_id]["intervals"]
+        expected_bass_interval = chord_intervals[inversion]
+        example_root_pc = key_to_pc(EXAMPLE_KEY)
+        bass_abs, bass_label, bass_fret = min(
+            (STRING_BASE_SEMITONES[TAB_STRINGS[label]] + fret, label, fret)
+            for label, frets in tab.items()
+            for fret in frets
         )
-    if category not in CAGED_CATEGORIES:
-        root_abs = STRING_BASE_SEMITONES[root_string] + example_anchor
-        for label, frets in tab.items():
-            string = TAB_STRINGS[label]
-            for fret in frets:
-                if STRING_BASE_SEMITONES[string] + fret < root_abs:
-                    raise ConfigError(
-                        f"{path}: string {label}, fret {fret}: sounds below "
-                        f"the low root ({EXAMPLE_KEY} at {root_label}-string "
-                        f"fret {example_anchor}) — finger forms never play "
-                        f"below the root"
-                    )
+        if bass_label != root_label:
+            raise ConfigError(
+                f"{path}: the lowest note (string {bass_label}, fret "
+                f"{bass_fret}) must sound on string {root_label} — the "
+                f"anchor string carries this inversion's bass note"
+            )
+        bass_pc = (STANDARD_TUNING[TAB_STRINGS[bass_label]] + bass_fret) % 12
+        bass_interval = (bass_pc - example_root_pc) % 12
+        if bass_interval != expected_bass_interval:
+            raise ConfigError(
+                f"{path}: the bass note ({note_name(bass_pc)}, interval "
+                f"{bass_interval} from the root) doesn't match inversion "
+                f"{inversion} (expected interval {expected_bass_interval} "
+                f"of chord intervals {chord_intervals})"
+            )
+    else:
+        if example_anchor not in tab[root_label]:
+            raise ConfigError(
+                f"{path}: the root ({EXAMPLE_KEY} at fret {example_anchor}) "
+                f"must appear on string {root_label} — the anchor string "
+                f"carries the root"
+            )
+        if category not in CAGED_CATEGORIES:
+            root_abs = STRING_BASE_SEMITONES[root_string] + example_anchor
+            lowest_abs, lowest_label, lowest_fret = min(
+                (STRING_BASE_SEMITONES[TAB_STRINGS[label]] + fret, label, fret)
+                for label, frets in tab.items()
+                for fret in frets
+            )
+            if lowest_abs < root_abs:
+                raise ConfigError(
+                    f"{path}: string {lowest_label}, fret {lowest_fret}: "
+                    f"sounds below the low root ({EXAMPLE_KEY} at "
+                    f"{root_label}-string fret {example_anchor}) — finger "
+                    f"forms never play below the root"
+                )
 
     # Musical validation in the example key: every declared note must belong
     # to the scale. TAB_STRINGS iterates low E -> high e, so validation
@@ -490,7 +578,7 @@ def load_fingerings(
     scales = load_scales(scales_path)
 
     fingerings = {}
-    files = sorted([*dir_path.glob("*.yaml"), *dir_path.glob("*.yml")])
+    files = sorted([*dir_path.rglob("*.yaml"), *dir_path.rglob("*.yml")])
     if not files:
         raise ConfigError(f"No fingering configs found in {dir_path}")
     for path in files:

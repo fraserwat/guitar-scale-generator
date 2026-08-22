@@ -6,6 +6,10 @@
 #   scale | arpeggio  -> finger forms  ("2nd Finger Form"),
 #                        `starting_finger` required (the arpeggio forms are
 #                        derived from the same-finger scale forms)
+#   chord             -> inversion labels ("E Root (1st Inversion)"); needs
+#                        `inversion` (0-3) and `menu_group`
+#                        (core_diatonic | altered); one entry per
+#                        (chord type, inversion), separate from arpeggios
 #
 # Adding a new scale is just a new entry here (plus fingering configs that
 # reference it in configs/fingerings/).
@@ -53,3 +57,127 @@ natural_minor_scale:
   name: "Natural Minor Scale"
   intervals: [0, 2, 3, 5, 7, 8, 10]
   category: scale
+
+# Chord Inv. — Core Diatonic (major7 / minor7 / dominant7 / minor7b5).
+major7_chord_0th_inv:
+  name: "Major 7 — Root Position"
+  intervals: [0, 4, 7, 11]
+  category: chord
+  inversion: 0
+  menu_group: core_diatonic
+major7_chord_1st_inv:
+  name: "Major 7 — 1st Inversion"
+  intervals: [0, 4, 7, 11]
+  category: chord
+  inversion: 1
+  menu_group: core_diatonic
+major7_chord_2nd_inv:
+  name: "Major 7 — 2nd Inversion"
+  intervals: [0, 4, 7, 11]
+  category: chord
+  inversion: 2
+  menu_group: core_diatonic
+major7_chord_3rd_inv:
+  name: "Major 7 — 3rd Inversion"
+  intervals: [0, 4, 7, 11]
+  category: chord
+  inversion: 3
+  menu_group: core_diatonic
+minor7_chord_0th_inv:
+  name: "Minor 7 — Root Position"
+  intervals: [0, 3, 7, 10]
+  category: chord
+  inversion: 0
+  menu_group: core_diatonic
+minor7_chord_1st_inv:
+  name: "Minor 7 — 1st Inversion"
+  intervals: [0, 3, 7, 10]
+  category: chord
+  inversion: 1
+  menu_group: core_diatonic
+minor7_chord_2nd_inv:
+  name: "Minor 7 — 2nd Inversion"
+  intervals: [0, 3, 7, 10]
+  category: chord
+  inversion: 2
+  menu_group: core_diatonic
+minor7_chord_3rd_inv:
+  name: "Minor 7 — 3rd Inversion"
+  intervals: [0, 3, 7, 10]
+  category: chord
+  inversion: 3
+  menu_group: core_diatonic
+dominant7_chord_0th_inv:
+  name: "Dominant 7 — Root Position"
+  intervals: [0, 4, 7, 10]
+  category: chord
+  inversion: 0
+  menu_group: core_diatonic
+dominant7_chord_1st_inv:
+  name: "Dominant 7 — 1st Inversion"
+  intervals: [0, 4, 7, 10]
+  category: chord
+  inversion: 1
+  menu_group: core_diatonic
+dominant7_chord_2nd_inv:
+  name: "Dominant 7 — 2nd Inversion"
+  intervals: [0, 4, 7, 10]
+  category: chord
+  inversion: 2
+  menu_group: core_diatonic
+dominant7_chord_3rd_inv:
+  name: "Dominant 7 — 3rd Inversion"
+  intervals: [0, 4, 7, 10]
+  category: chord
+  inversion: 3
+  menu_group: core_diatonic
+minor7b5_chord_0th_inv:
+  name: "Minor 7b5 — Root Position"
+  intervals: [0, 3, 6, 10]
+  category: chord
+  inversion: 0
+  menu_group: core_diatonic
+minor7b5_chord_1st_inv:
+  name: "Minor 7b5 — 1st Inversion"
+  intervals: [0, 3, 6, 10]
+  category: chord
+  inversion: 1
+  menu_group: core_diatonic
+minor7b5_chord_2nd_inv:
+  name: "Minor 7b5 — 2nd Inversion"
+  intervals: [0, 3, 6, 10]
+  category: chord
+  inversion: 2
+  menu_group: core_diatonic
+minor7b5_chord_3rd_inv:
+  name: "Minor 7b5 — 3rd Inversion"
+  intervals: [0, 3, 6, 10]
+  category: chord
+  inversion: 3
+  menu_group: core_diatonic
+
+# Chord Inv. — Altered (diminished7 today; augmented etc. can join later).
+diminished7_chord_0th_inv:
+  name: "Diminished 7 — Root Position"
+  intervals: [0, 3, 6, 9]
+  category: chord
+  inversion: 0
+  menu_group: altered
+diminished7_chord_1st_inv:
+  name: "Diminished 7 — 1st Inversion"
+  intervals: [0, 3, 6, 9]
+  category: chord
+  inversion: 1
+  menu_group: altered
+diminished7_chord_2nd_inv:
+  name: "Diminished 7 — 2nd Inversion"
+  intervals: [0, 3, 6, 9]
+  category: chord
+  inversion: 2
+  menu_group: altered
+diminished7_chord_3rd_inv:
+  name: "Diminished 7 — 3rd Inversion"
+  intervals: [0, 3, 6, 9]
+  category: chord
+  inversion: 3
+  menu_group: altered
