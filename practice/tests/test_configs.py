@@ -92,25 +92,49 @@ VALID_CHORD_FORM = {
 # 2nd and 4th finger E-root forms plus a 1st finger A-root form (hand-authored
 # TABs derived from the same-finger major-scale forms), the five CAGED boxes
 # of each pentatonic scale, and the shipped Chord Inv. forms: major7
-# 0th inversion x3 anchors, plus major7/minor7/dominant7/minor7b5
-# 1st/2nd/3rd inversion on D-root.
-EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 20, "pentatonic": 10, "chord": 15}
+# 0th inversion x3 anchors, major7/minor7/dominant7/minor7b5/diminished7
+# 1st/2nd/3rd inversion on D-root, plus all four inversions of
+# major7/minor7/dominant7/minor7b5/diminished7 on E-root.
+EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 20, "pentatonic": 10, "chord": 38}
 EXPECTED_FORM_IDS = {
     "major7-chord-e-root-0th-inv",
+    "major7-chord-e-root-1st-inv",
+    "major7-chord-e-root-2nd-inv",
+    "major7-chord-e-root-3rd-inv",
     "major7-chord-a-root-0th-inv",
     "major7-chord-d-root-0th-inv",
     "major7-chord-d-root-1st-inv",
     "major7-chord-d-root-2nd-inv",
     "major7-chord-d-root-3rd-inv",
+    "minor7-chord-e-root-0th-inv",
+    "minor7-chord-e-root-1st-inv",
+    "minor7-chord-e-root-2nd-inv",
+    "minor7-chord-e-root-3rd-inv",
     "minor7-chord-d-root-1st-inv",
     "minor7-chord-d-root-2nd-inv",
     "minor7-chord-d-root-3rd-inv",
+    "dominant7-chord-e-root-0th-inv",
+    "dominant7-chord-e-root-1st-inv",
+    "dominant7-chord-e-root-2nd-inv",
+    "dominant7-chord-e-root-3rd-inv",
     "dominant7-chord-d-root-1st-inv",
     "dominant7-chord-d-root-2nd-inv",
     "dominant7-chord-d-root-3rd-inv",
+    "minor7b5-chord-e-root-0th-inv",
+    "minor7b5-chord-e-root-1st-inv",
+    "minor7b5-chord-e-root-2nd-inv",
+    "minor7b5-chord-e-root-3rd-inv",
     "minor7b5-chord-d-root-1st-inv",
     "minor7b5-chord-d-root-2nd-inv",
     "minor7b5-chord-d-root-3rd-inv",
+    "diminished7-chord-e-root-0th-inv",
+    "diminished7-chord-e-root-1st-inv",
+    "diminished7-chord-e-root-2nd-inv",
+    "diminished7-chord-e-root-3rd-inv",
+    "diminished7-chord-d-root-0th-inv",
+    "diminished7-chord-d-root-1st-inv",
+    "diminished7-chord-d-root-2nd-inv",
+    "diminished7-chord-d-root-3rd-inv",
     "major-pentatonic-c-shape",
     "major-pentatonic-a-shape",
     "major-pentatonic-g-shape",
@@ -171,9 +195,9 @@ def load_temp(*forms):
 
 
 class ShippedConfigTests(SimpleTestCase):
-    def test_57_configs_load_and_validate(self):
+    def test_80_configs_load_and_validate(self):
         fingerings = theory.load_fingerings()
-        self.assertEqual(len(fingerings), 57)
+        self.assertEqual(len(fingerings), 80)
 
     def test_count_by_category(self):
         """3 E-root + 3 A-root finger forms for each of the major and

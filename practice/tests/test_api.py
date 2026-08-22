@@ -307,12 +307,18 @@ class RoundApiTests(ValidRoundMixin, TestCase):
             "Major 7 — Root Position",
             "Major 7 — 1st Inversion", "Major 7 — 2nd Inversion",
             "Major 7 — 3rd Inversion",
+            "Minor 7 — Root Position",
             "Minor 7 — 1st Inversion", "Minor 7 — 2nd Inversion",
             "Minor 7 — 3rd Inversion",
+            "Dominant 7 — Root Position",
             "Dominant 7 — 1st Inversion", "Dominant 7 — 2nd Inversion",
             "Dominant 7 — 3rd Inversion",
+            "Minor 7b5 — Root Position",
             "Minor 7b5 — 1st Inversion", "Minor 7b5 — 2nd Inversion",
             "Minor 7b5 — 3rd Inversion",
+            "Diminished 7 — Root Position",
+            "Diminished 7 — 1st Inversion", "Diminished 7 — 2nd Inversion",
+            "Diminished 7 — 3rd Inversion",
         })
 
     def test_round_rejects_post(self):
