@@ -90,10 +90,14 @@ VALID_CHORD_FORM = {
 # Shipped configs: the E-string-root and A-string-root finger forms of the
 # major and natural minor scales, the five seventh-chord arpeggios in 1st,
 # 2nd and 4th finger E-root forms plus a 1st finger A-root form (hand-authored
-# TABs derived from the same-finger major-scale forms), and the five CAGED
-# boxes of each pentatonic scale.
-EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 20, "pentatonic": 10}
+# TABs derived from the same-finger major-scale forms), the five CAGED boxes
+# of each pentatonic scale, and the pilot Chord Inv. content: major7 root
+# position (0th inversion) on each of the three anchor strings.
+EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 20, "pentatonic": 10, "chord": 3}
 EXPECTED_FORM_IDS = {
+    "major7-chord-e-root-0th-inv",
+    "major7-chord-a-root-0th-inv",
+    "major7-chord-d-root-0th-inv",
     "major-pentatonic-c-shape",
     "major-pentatonic-a-shape",
     "major-pentatonic-g-shape",
@@ -154,9 +158,9 @@ def load_temp(*forms):
 
 
 class ShippedConfigTests(SimpleTestCase):
-    def test_42_configs_load_and_validate(self):
+    def test_45_configs_load_and_validate(self):
         fingerings = theory.load_fingerings()
-        self.assertEqual(len(fingerings), 42)
+        self.assertEqual(len(fingerings), 45)
 
     def test_count_by_category(self):
         """3 E-root + 3 A-root finger forms for each of the major and
@@ -206,6 +210,13 @@ class ShippedConfigTests(SimpleTestCase):
                 self.assertEqual(
                     sorted(f["starting_finger"] for f in forms),
                     expected_fingers, scale_id)
+            elif category == "chord":
+                # One pilot form per (scale, anchor) so far — no
+                # starting_finger/caged_shape to dedupe, just confirm the
+                # single shipped anchor variant.
+                self.assertEqual(len(forms), 1, (scale_id, anchor))
+                self.assertIsNone(forms[0]["starting_finger"])
+                self.assertIsNone(forms[0]["caged_shape"])
             else:
                 self.assertEqual(
                     sorted(f["starting_finger"] for f in forms),
@@ -238,6 +249,15 @@ class ShippedConfigTests(SimpleTestCase):
                 self.assertIsNone(form["starting_finger"])
                 self.assertEqual(form["display_label"],
                                  f"{form['caged_shape']} Shape")
+            elif form["category"] == "chord":
+                self.assertIsNone(form["caged_shape"])
+                self.assertIsNone(form["starting_finger"])
+                scales = theory.load_scales()
+                inversion = scales[form["scale"]]["inversion"]
+                self.assertEqual(
+                    form["display_label"],
+                    f"{root_label} Root ({theory.ordinal(inversion)} Inversion)",
+                )
             else:
                 self.assertIsNone(form["caged_shape"])
                 self.assertIn(form["starting_finger"], (1, 2, 3, 4))
