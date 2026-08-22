@@ -15,18 +15,10 @@ CHORD_MENU_GROUP_LABELS = {"core_diatonic": "Core Diatonic", "altered": "Altered
 def _exercise_groups():
     """Group configured scales for the start-menu exercise picker.
 
-    "Scales" and "Arpeggios" are flat {label, items} groups (Arpeggios
-    strips the redundant " Arpeggio" suffix), one checkbox per scale.
-    "Chord Inv." instead collapses down to one checkbox per menu_group
-    ("Core Diatonic", "Altered") — its value is every currently-playable
-    scale id in that group, comma-joined, so checking it plays all of
-    them (today just Major 7 Root Position under Core Diatonic); as more
-    chord types/inversions ship, that one checkbox picks them all up
-    automatically. Checkbox values are what /api/round/?scales= accepts
-    (a bare scale id or several, comma-joined — both parse the same way);
-    only scales with a loaded fingering form are offered, and a menu_group
-    with none yet (Altered, until a diminished7 form ships) is omitted —
-    a checkbox never promises a round it can't serve.
+    Scales/Arpeggios: one checkbox per scale. Chord Inv.: one checkbox
+    per menu_group ("Core Diatonic", "Altered"), value = every playable
+    scale id in that group, comma-joined (same format /api/round/?scales=
+    already accepts). Formless scales/groups are omitted.
     """
     playable = {form["scale"] for form in theory.load_fingerings().values()}
     groups = [{"label": "Scales", "items": []},
