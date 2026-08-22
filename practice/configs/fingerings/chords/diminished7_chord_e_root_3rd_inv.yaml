@@ -1,0 +1,16 @@
+# Source: Shalfi's Guitar Lesson Materials, "7th chord worksheet" —
+# Gdim7 3rd inv (E-root voicing), transposed from G to the example key A
+# (shift +2 frets, then an octave down so the lowest fret stays <= 12 —
+# same shape, same pitch classes). Bass = F# (diminished 7th) on E string.
+id: diminished7-chord-e-root-3rd-inv
+scale: diminished7_chord_3rd_inv   # scale id from ../../scales.yaml
+name: "Diminished 7 — 3rd Inversion (E-root)"
+anchor: root_low_e
+example_key: A
+tab:
+  E: [2]
+  A: []
+  D: [1]
+  G: [2]
+  B: [1]
+  e: []
