@@ -270,10 +270,15 @@ class RoundApiTests(ValidRoundMixin, TestCase):
         self.assertEqual(resp["Content-Type"], "application/json")
         self.assert_valid_round(resp.json())
 
-    def test_round_randomisation_stays_in_domain_over_400_calls(self):
+    def test_round_randomisation_stays_in_domain(self):
+        num_forms = len(theory.load_fingerings())
+        # Coupon-collector draw count: enough that P(any one form is never
+        # drawn) stays negligible as shipped content grows, rather than a
+        # fixed count that gets flakier every time a form is added.
+        draws = num_forms * 40
         seen = {"scales": set(), "directions": set(), "forms": set(),
                 "keys": set(), "categories": set()}
-        for _ in range(400):
+        for _ in range(draws):
             resp = self.client.get("/api/round/")
             self.assertEqual(resp.status_code, 200)
             data = resp.json()
@@ -283,10 +288,6 @@ class RoundApiTests(ValidRoundMixin, TestCase):
             seen["forms"].add(data["form_id"])
             seen["keys"].add(data["key"])
             seen["categories"].add(data["category"])
-
-        # Randomisation actually varies (P(failure) is astronomically small
-        # over 400 uniform draws from the 48 shipped forms: each form is
-        # missed with p = (47/48)^400 ~ 1.9e-4).
         self.assertEqual(seen["categories"],
                          {"scale", "arpeggio", "pentatonic", "chord"})
         # Chord Inv. rounds carry a null direction instead of Ascending/
@@ -306,6 +307,12 @@ class RoundApiTests(ValidRoundMixin, TestCase):
             "Major 7 — Root Position",
             "Major 7 — 1st Inversion", "Major 7 — 2nd Inversion",
             "Major 7 — 3rd Inversion",
+            "Minor 7 — 1st Inversion", "Minor 7 — 2nd Inversion",
+            "Minor 7 — 3rd Inversion",
+            "Dominant 7 — 1st Inversion", "Dominant 7 — 2nd Inversion",
+            "Dominant 7 — 3rd Inversion",
+            "Minor 7b5 — 1st Inversion", "Minor 7b5 — 2nd Inversion",
+            "Minor 7b5 — 3rd Inversion",
         })
 
     def test_round_rejects_post(self):
