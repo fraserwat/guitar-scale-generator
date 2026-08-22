@@ -471,7 +471,7 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
         chord_intervals = scales[scale_id]["intervals"]
         expected_bass_interval = chord_intervals[inversion]
         example_root_pc = key_to_pc(EXAMPLE_KEY)
-        bass_abs, bass_label, bass_fret = min(
+        _, bass_label, bass_fret = min(
             (STRING_BASE_SEMITONES[TAB_STRINGS[label]] + fret, label, fret)
             for label, frets in tab.items()
             for fret in frets

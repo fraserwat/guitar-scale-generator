@@ -10,7 +10,7 @@ import random
 from practice import theory
 from practice.models import AttemptLog
 
-ROUND_KEYS = {"scale", "key", "direction", "form_id", "form_name",
+ROUND_KEYS = {"scale", "key", "direction", "form_id",
               "category", "display_label", "caged_shape", "starting_finger",
               "window_start", "notes"}
 NOTE_KEYS = {"string", "fret", "pitch_class", "note_name", "is_root"}
@@ -192,7 +192,6 @@ class ValidRoundMixin:
         self.assertIn(data["form_id"], fingerings)
 
         form = fingerings[data["form_id"]]
-        self.assertEqual(data["form_name"], form["name"])
         self.assertEqual(data["scale"], scales[form["scale"]]["name"])
 
         # Category + display label + XOR-populated caged_shape /

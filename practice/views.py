@@ -104,7 +104,6 @@ def api_round(request):
         "key": key,
         "direction": direction,
         "form_id": form_id,
-        "form_name": form["name"],
         "category": form["category"],
         "display_label": form["display_label"],
         # caged_shape and starting_finger are XOR-populated by category:
