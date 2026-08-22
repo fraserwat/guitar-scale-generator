@@ -52,6 +52,24 @@ EXPECTED_SCALES = {
         ("Natural Minor Scale", [0, 2, 3, 5, 7, 8, 10], "scale"),
 }
 
+# Chord Inv. scales: one entry per (chord type, inversion) — a fully
+# separate concept from the *_arpeggio scales above (see EXPECTED_SCALES).
+_CHORD_TYPES = {
+    "major7_chord": ("Major 7", [0, 4, 7, 11]),
+    "minor7_chord": ("Minor 7", [0, 3, 7, 10]),
+    "dominant7_chord": ("Dominant 7", [0, 4, 7, 10]),
+    "minor7b5_chord": ("Minor 7b5", [0, 3, 6, 10]),
+    "diminished7_chord": ("Diminished 7", [0, 3, 6, 9]),
+}
+_INVERSION_SUFFIXES = {0: "0th", 1: "1st", 2: "2nd", 3: "3rd"}
+EXPECTED_CHORD_SCALES = {}
+for _prefix, (_name, _intervals) in _CHORD_TYPES.items():
+    for _n, _ord in _INVERSION_SUFFIXES.items():
+        _label = "Root Position" if _n == 0 else f"{_ord} Inversion"
+        EXPECTED_CHORD_SCALES[f"{_prefix}_{_ord}_inv"] = (
+            f"{_name} — {_label}", _intervals, "chord", _n,
+        )
+
 
 def frets_by_string(notes):
     """{string: sorted [frets]} from a resolve_form() note list."""
@@ -299,20 +317,30 @@ class AnchorFretTests(SimpleTestCase):
 
 
 class ScaleIntervalTests(SimpleTestCase):
-    def test_all_11_scales_literal(self):
+    def test_all_scales_literal(self):
         scales = theory.load_scales()
-        self.assertEqual(set(scales), set(EXPECTED_SCALES))
-        for scale_id, (name, intervals, category) in EXPECTED_SCALES.items():
+        expected = {**EXPECTED_SCALES,
+                    **{k: v[:3] for k, v in EXPECTED_CHORD_SCALES.items()}}
+        self.assertEqual(set(scales), set(expected))
+        for scale_id, (name, intervals, category) in expected.items():
             with self.subTest(scale=scale_id):
                 self.assertEqual(scales[scale_id]["name"], name)
                 self.assertEqual(scales[scale_id]["intervals"], intervals)
                 self.assertEqual(scales[scale_id]["category"], category)
 
+    def test_chord_scales_carry_inversion(self):
+        scales = theory.load_scales()
+        for scale_id, (_, _, _, inversion) in EXPECTED_CHORD_SCALES.items():
+            with self.subTest(scale=scale_id):
+                self.assertEqual(scales[scale_id]["inversion"], inversion)
+                self.assertIn(scales[scale_id]["menu_group"], theory.MENU_GROUPS)
+
     def test_scale_names(self):
-        self.assertEqual(
-            sorted(theory.scale_names()),
-            sorted(name for name, _, _ in EXPECTED_SCALES.values()),
+        expected_names = (
+            [name for name, _, _ in EXPECTED_SCALES.values()]
+            + [name for name, _, _, _ in EXPECTED_CHORD_SCALES.values()]
         )
+        self.assertEqual(sorted(theory.scale_names()), sorted(expected_names))
 
 
 class TabRoundTripTests(SimpleTestCase):
@@ -419,7 +447,7 @@ class ResolveFormExhaustiveTests(SimpleTestCase):
     def test_every_form_every_key(self):
         fingerings = theory.load_fingerings()
         scales = theory.load_scales()
-        self.assertEqual(len(fingerings), 42)
+        self.assertEqual(len(fingerings), 45)
         for form_id, form in fingerings.items():
             intervals = set(scales[form["scale"]]["intervals"])
             all_offsets = [o for offs in form["offsets"].values() for o in offs]

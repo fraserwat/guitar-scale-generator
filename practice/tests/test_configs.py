@@ -72,13 +72,32 @@ VALID_ARPEGGIO_FORM = {
     },
 }
 
+# A known-good chord-category config: major7, 1st inversion, E-root anchor
+# (the anchor string carries the 3rd — interval 4 — as its lowest note,
+# not the root). Chord tones covered: 3rd (E9/G6), 5th (A7/G9), 7th
+# (D6/B9), root (D7/B10).
+VALID_CHORD_FORM = {
+    "id": "test-chord-form",
+    "scale": "major7_chord_1st_inv",
+    "name": "Test Chord Form",
+    "anchor": "root_low_e",
+    "example_key": "A",
+    "tab": {
+        "E": [9], "A": [7], "D": [6, 7], "G": [6, 9], "B": [9, 10], "e": [],
+    },
+}
+
 # Shipped configs: the E-string-root and A-string-root finger forms of the
 # major and natural minor scales, the five seventh-chord arpeggios in 1st,
 # 2nd and 4th finger E-root forms plus a 1st finger A-root form (hand-authored
-# TABs derived from the same-finger major-scale forms), and the five CAGED
-# boxes of each pentatonic scale.
-EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 20, "pentatonic": 10}
+# TABs derived from the same-finger major-scale forms), the five CAGED boxes
+# of each pentatonic scale, and the pilot Chord Inv. content: major7 root
+# position (0th inversion) on each of the three anchor strings.
+EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 20, "pentatonic": 10, "chord": 3}
 EXPECTED_FORM_IDS = {
+    "major7-chord-e-root-0th-inv",
+    "major7-chord-a-root-0th-inv",
+    "major7-chord-d-root-0th-inv",
     "major-pentatonic-c-shape",
     "major-pentatonic-a-shape",
     "major-pentatonic-g-shape",
@@ -139,9 +158,9 @@ def load_temp(*forms):
 
 
 class ShippedConfigTests(SimpleTestCase):
-    def test_42_configs_load_and_validate(self):
+    def test_45_configs_load_and_validate(self):
         fingerings = theory.load_fingerings()
-        self.assertEqual(len(fingerings), 42)
+        self.assertEqual(len(fingerings), 45)
 
     def test_count_by_category(self):
         """3 E-root + 3 A-root finger forms for each of the major and
@@ -191,6 +210,13 @@ class ShippedConfigTests(SimpleTestCase):
                 self.assertEqual(
                     sorted(f["starting_finger"] for f in forms),
                     expected_fingers, scale_id)
+            elif category == "chord":
+                # One pilot form per (scale, anchor) so far — no
+                # starting_finger/caged_shape to dedupe, just confirm the
+                # single shipped anchor variant.
+                self.assertEqual(len(forms), 1, (scale_id, anchor))
+                self.assertIsNone(forms[0]["starting_finger"])
+                self.assertIsNone(forms[0]["caged_shape"])
             else:
                 self.assertEqual(
                     sorted(f["starting_finger"] for f in forms),
@@ -223,6 +249,15 @@ class ShippedConfigTests(SimpleTestCase):
                 self.assertIsNone(form["starting_finger"])
                 self.assertEqual(form["display_label"],
                                  f"{form['caged_shape']} Shape")
+            elif form["category"] == "chord":
+                self.assertIsNone(form["caged_shape"])
+                self.assertIsNone(form["starting_finger"])
+                scales = theory.load_scales()
+                inversion = scales[form["scale"]]["inversion"]
+                self.assertEqual(
+                    form["display_label"],
+                    f"{root_label} Root ({theory.ordinal(inversion)} Inversion)",
+                )
             else:
                 self.assertIsNone(form["caged_shape"])
                 self.assertIn(form["starting_finger"], (1, 2, 3, 4))
@@ -431,6 +466,31 @@ class ValidTempConfigTests(SimpleTestCase):
         self.assertEqual(form["tab"]["E"], [5])
         self.assertEqual(form["tab"]["D"], [7])
 
+    def test_valid_chord_config_loads(self):
+        fingerings = load_temp(VALID_CHORD_FORM)
+        form = fingerings["test-chord-form"]
+        self.assertEqual(form["category"], "chord")
+        self.assertIsNone(form["caged_shape"])
+        self.assertIsNone(form["starting_finger"])
+        self.assertEqual(form["display_label"], "E Root (1st Inversion)")
+        self.assertEqual(form["tab"]["E"], [9])
+
+    def test_valid_0th_inversion_chord_config_loads(self):
+        """0th inversion is root position: the anchor string's lowest note
+        is the root itself, same shape as an arpeggio finger form."""
+        root_position = {
+            **VALID_CHORD_FORM,
+            "id": "test-chord-form-0th",
+            "scale": "major7_chord_0th_inv",
+            "tab": {
+                "E": [5, 9], "A": [7], "D": [6, 7], "G": [6, 9],
+                "B": [9, 10], "e": [],
+            },
+        }
+        fingerings = load_temp(root_position)
+        form = fingerings["test-chord-form-0th"]
+        self.assertEqual(form["display_label"], "E Root (0th Inversion)")
+
 
 class BrokenConfigTests(SimpleTestCase):
     """Deliberately broken configs must raise clear ConfigErrors."""
@@ -589,6 +649,42 @@ class BrokenConfigTests(SimpleTestCase):
         with self.assertRaises(theory.ConfigError) as ctx:
             self.load_broken(form)
         self.assertIn("starting_finger", str(ctx.exception))
+
+    def test_starting_finger_forbidden_for_chord_rejected(self):
+        bad = {**VALID_CHORD_FORM, "starting_finger": 2}
+        with self.assertRaises(theory.ConfigError) as ctx:
+            self.load_broken(bad)
+        self.assertIn("starting_finger", str(ctx.exception))
+        self.assertIn("forbidden", str(ctx.exception))
+
+    def test_caged_shape_forbidden_for_chord_rejected(self):
+        bad = {**VALID_CHORD_FORM, "caged_shape": "E"}
+        with self.assertRaises(theory.ConfigError) as ctx:
+            self.load_broken(bad)
+        self.assertIn("caged_shape", str(ctx.exception))
+        self.assertIn("forbidden", str(ctx.exception))
+
+    def test_chord_bass_note_off_anchor_string_rejected(self):
+        """anchor=root_low_a but the lowest-sounding note (low E fret 5,
+        absolute pitch below A-string fret 1) is on the low E string —
+        the anchor string must carry this inversion's bass note."""
+        bad = {
+            **VALID_CHORD_FORM,
+            "anchor": "root_low_a",
+            "tab": {"E": [5], "A": [1], "D": [], "G": [], "B": [], "e": []},
+        }
+        with self.assertRaises(theory.ConfigError) as ctx:
+            self.load_broken(bad)
+        self.assertIn("anchor string", str(ctx.exception))
+
+    def test_chord_bass_note_wrong_inversion_rejected(self):
+        """VALID_CHORD_FORM's bass note is the 3rd (interval 4) — correct
+        for major7_chord_1st_inv. Declaring it 2nd inversion instead
+        (bass should be the 5th, interval 7) must be rejected."""
+        bad = {**VALID_CHORD_FORM, "scale": "major7_chord_2nd_inv"}
+        with self.assertRaises(theory.ConfigError) as ctx:
+            self.load_broken(bad)
+        self.assertIn("inversion", str(ctx.exception))
 
     def test_bad_string_label_rejected(self):
         bad = {**VALID_FORM, "tab": {**VALID_FORM["tab"], "C": [5]}}

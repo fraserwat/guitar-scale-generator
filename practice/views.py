@@ -12,27 +12,36 @@ from .models import AttemptLog
 def _exercise_groups():
     """Group configured scales for the start-menu exercise picker.
 
-    "Scales" = the pentatonic + scale categories (full config names);
-    "Arpeggios" = the arpeggio category, with the redundant " Arpeggio"
-    suffix stripped for display. Config order is preserved within each
-    group; checkbox values are the raw scale ids (what /api/round/?scales=
-    accepts), so a new scale in scales.yaml appears here automatically.
-
-    Only scales with at least one loaded fingering form are offered
-    (scales.yaml defines major/minor arpeggio, but no fingerings ship
-    for them) — a checkbox that can never serve a round would be a lie.
+    "Scales" and "Arpeggios" are flat {label, items} groups (Arpeggios
+    strips the redundant " Arpeggio" suffix). "Chord Inv." instead nests
+    two {label, items} subgroups ("Core Diatonic", "Altered", from each
+    chord scale's menu_group) so the template can toggle them
+    independently within one column. Checkbox values are scale ids (what
+    /api/round/?scales= accepts); only scales with a loaded fingering form
+    are offered, so a checkbox never promises a round it can't serve.
     """
     playable = {form["scale"] for form in theory.load_fingerings().values()}
     groups = [{"label": "Scales", "items": []},
               {"label": "Arpeggios", "items": []}]
+    chord_subgroups = {
+        "core_diatonic": {"label": "Core Diatonic", "items": []},
+        "altered": {"label": "Altered", "items": []},
+    }
     for scale_id, spec in theory.load_scales().items():
         if scale_id not in playable:
             continue
         if spec["category"] == "arpeggio":
             groups[1]["items"].append(
                 {"id": scale_id, "name": spec["name"].removesuffix(" Arpeggio")})
+        elif spec["category"] == "chord":
+            chord_subgroups[spec["menu_group"]]["items"].append(
+                {"id": scale_id, "name": spec["name"]})
         else:
             groups[0]["items"].append({"id": scale_id, "name": spec["name"]})
+    groups.append({
+        "label": "Chord Inv.",
+        "subgroups": [chord_subgroups["core_diatonic"], chord_subgroups["altered"]],
+    })
     return groups
 
 
@@ -86,9 +95,11 @@ def api_round(request):
     # random.random() isn't even drawn for them.
     if key in theory.SHARP_TO_FLAT and random.random() < 0.5:
         key = theory.SHARP_TO_FLAT[key]
-    direction = random.choice(theory.DIRECTIONS)
 
     form = fingerings[form_id]
+    # Chord-inversion rounds reveal all notes at once — there's no
+    # ascending/descending run to direct, so no direction is drawn.
+    direction = None if form["category"] == "chord" else random.choice(theory.DIRECTIONS)
     window_start, notes = theory.resolve_form(form_id, key)
     return JsonResponse({
         "scale": scales[form["scale"]]["name"],
@@ -131,11 +142,19 @@ def api_log(request):
 
     if not isinstance(form_id, str) or form_id not in valid_forms:
         errors["form_id"] = f"Required; must be one of {list(valid_forms)}."
+        category = None
+    else:
+        category = valid_forms[form_id]["category"]
     if not isinstance(scale, str) or scale not in valid_scales:
         errors["scale"] = f"Required; must be one of {valid_scales}."
     if not isinstance(key, str) or key not in theory.VALID_KEYS:
         errors["key"] = f"Required; must be one of {theory.VALID_KEYS}."
-    if not isinstance(direction, str) or direction not in theory.DIRECTIONS:
+    # Chord-inversion rounds carry no direction (see api_round); every other
+    # category still requires one of theory.DIRECTIONS.
+    if category == "chord":
+        if direction is not None:
+            errors["direction"] = "Must be null for chord-inversion rounds (no ascending/descending)."
+    elif not isinstance(direction, str) or direction not in theory.DIRECTIONS:
         errors["direction"] = f"Required; must be one of {theory.DIRECTIONS}."
     if not isinstance(correct, bool):
         errors["correct"] = "Required; must be a JSON boolean."

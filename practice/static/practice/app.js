@@ -20,6 +20,7 @@
   var roundKeyEl = document.getElementById("round-key");
   var roundScaleEl = document.getElementById("round-scale");
   var roundDirectionEl = document.getElementById("round-direction");
+  var roundSepEl = document.getElementById("round-sep");
   var roundLabelEl = document.getElementById("round-label");
   var neckSvg = document.getElementById("neck");
   var tabSvg = document.getElementById("tab");
@@ -193,7 +194,8 @@
     round.notes.forEach(function (note, idx) {
       var cx = NECK.left + (note.fret - start + 0.5) * NECK.fretW;
       var cy = stringY(note.string);
-      var order = round.direction === "Descending" ? last - idx : idx;
+      var order = round.direction == null ? 0
+        : round.direction === "Descending" ? last - idx : idx;
       var dot = el("circle", {
         cx: cx, cy: cy,
         r: note.is_root ? 10 : 9,
@@ -219,7 +221,9 @@
   /** Draw the TAB staff; with a round, also lay out the run's numbers.
    *  The API's notes arrive in ascending play order (low string first, then
    *  fret), so Ascending renders as-is left to right from the low root and
-   *  Descending is the same run reversed, starting on the top note. */
+   *  Descending is the same run reversed, starting on the top note. Chord
+   *  Inv. rounds (round.direction null) leave the column order as-is —
+   *  it's layout, not a reveal order. */
   function drawTab(round) {
     tabSvg.textContent = "";
     var labels = ["e", "B", "G", "D", "A", "E"];
@@ -248,7 +252,7 @@
       // (mask + number pop together, hence the per-note group). The
       // cascade class itself is added at reveal time — see
       // revealTabNumbers.
-      var noteG = el("g", { style: "--i:" + idx });
+      var noteG = el("g", { style: "--i:" + (round.direction == null ? 0 : idx) });
       var cx = TAB.left + 10 + (idx + 0.5) * colW;
       var cy = tabY(note.string);
       // Mask the staff line behind the number (conventional TAB look).
@@ -408,7 +412,11 @@
     roundKeyEl.textContent = round.key;
     roundScaleEl.textContent = round.scale;
     roundLabelEl.textContent = round.display_label;
-    roundDirectionEl.textContent = round.direction;
+    // Chord Inv. rounds carry no direction (null) — hide the "· Direction"
+    // tail entirely rather than show a stray separator or blank text.
+    roundSepEl.classList.toggle("hidden", round.direction == null);
+    roundDirectionEl.classList.toggle("hidden", round.direction == null);
+    roundDirectionEl.textContent = round.direction == null ? "" : round.direction;
     drawNeck(viewStart(round)); // UNFILLED (and unlabelled) until reveal
     drawTab(round); // staff visible, numbers hidden until reveal
     neckSvg.classList.add("revealable");
@@ -509,11 +517,13 @@
     name.textContent = r.key + " " + r.scale;
     var meta = document.createElement("span");
     meta.className = "result-meta";
-    meta.textContent = r.display_label + " · ";
-    var dir = document.createElement("span");
-    dir.className = "result-direction";
-    dir.textContent = r.direction;
-    meta.appendChild(dir);
+    meta.textContent = r.display_label + (r.direction == null ? "" : " · ");
+    if (r.direction != null) {
+      var dir = document.createElement("span");
+      dir.className = "result-direction";
+      dir.textContent = r.direction;
+      meta.appendChild(dir);
+    }
     li.appendChild(name);
     li.appendChild(meta);
     return li;

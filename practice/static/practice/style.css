@@ -277,7 +277,7 @@ body {
 
 .exercise-groups {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
 }
 
@@ -286,6 +286,18 @@ body {
   border-radius: 8px;
   padding: 0.75rem 0.9rem;
 }
+
+/* Chord Inv.: a plain (non-toggle) column title over two independently
+   toggleable .exercise-group rows (Core Diatonic, Altered) stacked
+   vertically — a grid item like any other .exercise-groups child, just
+   with nested content instead of a flat item list. */
+.exercise-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.exercise-column > .group-heading { margin-bottom: 0; }
 
 .exercise-option {
   display: flex;

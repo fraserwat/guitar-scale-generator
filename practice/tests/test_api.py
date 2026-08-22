@@ -98,7 +98,7 @@ class IndexPageTests(TestCase):
         playable = self.playable_scale_ids()
         last = scales_at
         for scale_id, spec in theory.load_scales().items():
-            if spec["category"] == "arpeggio" or scale_id not in playable:
+            if spec["category"] in ("arpeggio", "chord") or scale_id not in playable:
                 continue
             at = html.index(f">{spec['name']}</span>")
             self.assertGreater(at, last, scale_id)
@@ -157,7 +157,11 @@ class ValidRoundMixin:
         self.assertEqual(set(data), ROUND_KEYS)
         self.assertIn(data["scale"], theory.scale_names())
         self.assertIn(data["key"], theory.VALID_KEYS)
-        self.assertIn(data["direction"], theory.DIRECTIONS)
+        # Chord Inv. rounds carry no direction (all notes reveal at once).
+        if data["category"] == "chord":
+            self.assertIsNone(data["direction"])
+        else:
+            self.assertIn(data["direction"], theory.DIRECTIONS)
         self.assertIn(data["form_id"], fingerings)
 
         form = fingerings[data["form_id"]]
@@ -177,6 +181,15 @@ class ValidRoundMixin:
             self.assertIsNone(data["starting_finger"])
             self.assertEqual(data["display_label"],
                              f"{data['caged_shape']} Shape")
+        elif data["category"] == "chord":
+            self.assertIsNone(data["caged_shape"])
+            self.assertIsNone(data["starting_finger"])
+            root_label = {"root_low_e": "E", "root_low_a": "A",
+                          "root_low_d": "D"}[form["anchor"]]
+            inversion = scales[form["scale"]]["inversion"]
+            self.assertEqual(
+                data["display_label"],
+                f"{root_label} Root ({theory.ordinal(inversion)} Inversion)")
         else:
             self.assertIsNone(data["caged_shape"])
             self.assertIsInstance(data["starting_finger"], int)
@@ -246,11 +259,13 @@ class RoundApiTests(ValidRoundMixin, TestCase):
             seen["categories"].add(data["category"])
 
         # Randomisation actually varies (P(failure) is astronomically small
-        # over 400 uniform draws from the 32 shipped forms: each form is
-        # missed with p = (31/32)^400 ~ 3.1e-6).
+        # over 400 uniform draws from the 45 shipped forms: each form is
+        # missed with p = (44/45)^400 ~ 1.1e-4).
         self.assertEqual(seen["categories"],
-                         {"scale", "arpeggio", "pentatonic"})
-        self.assertEqual(seen["directions"], {"Ascending", "Descending"})
+                         {"scale", "arpeggio", "pentatonic", "chord"})
+        # Chord Inv. rounds carry a null direction instead of Ascending/
+        # Descending — both still show up alongside it.
+        self.assertEqual(seen["directions"], {"Ascending", "Descending", None})
         self.assertEqual(seen["forms"], set(theory.load_fingerings()))
         self.assertGreaterEqual(len(seen["keys"]), 5)
         # Both accidental spellings get served (flat/sharp coin flip).
@@ -262,11 +277,103 @@ class RoundApiTests(ValidRoundMixin, TestCase):
             "Minor 7 Arpeggio", "Minor 7b5 Arpeggio",
             "Diminished 7 Arpeggio",
             "Major Pentatonic", "Minor Pentatonic",
+            "Major 7 — Root Position",
         })
 
     def test_round_rejects_post(self):
         resp = self.client.post("/api/round/")
         self.assertEqual(resp.status_code, 405)
+
+
+# A minimal valid chord-category form (major7, 1st inversion, E-root
+# anchor — same shape as VALID_CHORD_FORM in test_configs.py, but built
+# fresh here rather than imported to keep the two test modules independent).
+# No chord fingerings ship yet (pilot content pending), so these tests
+# patch theory.load_fingerings() to exercise the category=="chord" branch
+# of api_round/api_log ahead of real content landing.
+_CHORD_FORM_RAW = {
+    "id": "test-chord-form",
+    "scale": "major7_chord_1st_inv",
+    "name": "Test Chord Form",
+    "anchor": "root_low_e",
+    "example_key": "A",
+    "tab": {
+        "E": [9], "A": [7], "D": [6, 7], "G": [6, 9], "B": [9, 10], "e": [],
+    },
+}
+
+
+# Captured once, before any test patches theory.load_fingerings — the
+# side_effect below must not call the (possibly-patched) function itself.
+_BASE_FINGERINGS = dict(theory.load_fingerings())
+_CHORD_FORM = theory._validate_fingering(
+    dict(_CHORD_FORM_RAW), theory.FINGERINGS_DIR / "fake.yaml",
+    theory.load_scales())
+
+
+def _chord_fingerings(*args, **kwargs):
+    """Mock side_effect for load_fingerings(dir_path, scales_path): every
+    real shipped form plus one synthetic chord-category form."""
+    return {**_BASE_FINGERINGS, _CHORD_FORM["id"]: _CHORD_FORM}
+
+
+class ChordRoundApiTests(TestCase):
+    """Chord Inv. rounds carry no direction — see api_round/api_log."""
+
+    def test_chord_round_has_null_direction(self):
+        with mock.patch("practice.theory.load_fingerings",
+                         side_effect=_chord_fingerings):
+            resp = self.client.get(
+                "/api/round/?scales=major7_chord_1st_inv")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["category"], "chord")
+        self.assertIsNone(data["direction"])
+        self.assertEqual(data["display_label"], "E Root (1st Inversion)")
+
+    def test_chord_log_accepts_null_direction(self):
+        with mock.patch("practice.theory.load_fingerings",
+                         side_effect=_chord_fingerings):
+            resp = self.client.post(
+                "/api/log/",
+                data=json.dumps({
+                    "form_id": "test-chord-form",
+                    "scale": "Major 7 — 1st Inversion",
+                    "key": "A",
+                    "direction": None,
+                    "correct": True,
+                }),
+                content_type="application/json",
+            )
+        self.assertEqual(resp.status_code, 201)
+        log = AttemptLog.objects.get(id=resp.json()["id"])
+        self.assertIsNone(log.direction)
+
+    def test_chord_log_rejects_non_null_direction(self):
+        with mock.patch("practice.theory.load_fingerings",
+                         side_effect=_chord_fingerings):
+            resp = self.client.post(
+                "/api/log/",
+                data=json.dumps({
+                    "form_id": "test-chord-form",
+                    "scale": "Major 7 — 1st Inversion",
+                    "key": "A",
+                    "direction": "Ascending",
+                    "correct": True,
+                }),
+                content_type="application/json",
+            )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("direction", resp.json()["errors"])
+
+    def test_non_chord_log_still_requires_direction(self):
+        resp = self.client.post(
+            "/api/log/",
+            data=json.dumps({**VALID_LOG_PAYLOAD, "direction": None}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("direction", resp.json()["errors"])
 
 
 class RoundKeySpellingTests(TestCase):
@@ -588,13 +695,16 @@ class LogApiTests(TestCase):
 
     def test_every_loaded_form_id_accepted(self):
         """form_id is validated against the loaded fingering configs, so
-        every shipped form — whatever /api/round/ can serve — logs fine."""
-        form_ids = list(theory.load_fingerings())
-        for form_id in form_ids:
+        every shipped form — whatever /api/round/ can serve — logs fine.
+        Chord-category forms carry no direction (see ChordRoundApiTests)."""
+        fingerings = theory.load_fingerings()
+        for form_id, form in fingerings.items():
             with self.subTest(form_id=form_id):
-                resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": form_id})
+                direction = None if form["category"] == "chord" else "Ascending"
+                resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": form_id,
+                                      "direction": direction})
                 self.assertEqual(resp.status_code, 201)
-        self.assertEqual(AttemptLog.objects.count(), len(form_ids))
+        self.assertEqual(AttemptLog.objects.count(), len(fingerings))
 
     def test_every_flat_key_accepted(self):
         """The client echoes the served key back, so flat spellings

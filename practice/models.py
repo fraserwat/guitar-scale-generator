@@ -7,7 +7,9 @@ class AttemptLog(models.Model):
     form_id = models.CharField(max_length=64)  # fingering form config id
     scale = models.CharField(max_length=64)
     key = models.CharField(max_length=3)
-    direction = models.CharField(max_length=16)
+    # Null for chord-inversion rounds, which have no ascending/descending
+    # direction (all notes reveal at once).
+    direction = models.CharField(max_length=16, null=True, blank=True)
     correct = models.BooleanField()
     is_retry = models.BooleanField(default=False)  # re-ask of a round just missed
     timestamp = models.DateTimeField(auto_now_add=True)

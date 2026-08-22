@@ -1,0 +1,16 @@
+# Source: Shalfi's Guitar Lesson Materials, "7th chord worksheet no. 3" —
+# Fmaj7 (D-root voicing), transposed from F to the example key A (shift
+# +4 frets; the shape itself is unchanged). Root F on D string fret 3 ->
+# root A on D string fret 7. Mutes the low E and A strings.
+id: major7-chord-d-root-0th-inv
+scale: major7_chord_0th_inv   # scale id from ../../scales.yaml
+name: "Major 7 — Root Position (D-root)"
+anchor: root_low_d
+example_key: A
+tab:
+  E: []
+  A: []
+  D: [7]
+  G: [9]
+  B: [9]
+  e: [9]
