@@ -1,0 +1,15 @@
+# Hand-authored TAB written in the example key A (root = low E fret 5).
+# Convention: the form starts on the root — nothing below the low root is played.
+id: major7-arpeggio-e-root-4th-finger-form
+scale: major7_arpeggio   # scale id from ../scales.yaml
+name: "Major 7 Arpeggio — 4th Finger Form (E-root)"
+starting_finger: 4       # derived from the e-root 4th finger major scale
+anchor: root_low_e
+example_key: A
+tab:
+  E: [5]
+  A: [4]
+  D: [2]
+  G: [1, 2]
+  B: [2, 5]
+  e: [4, 5]
