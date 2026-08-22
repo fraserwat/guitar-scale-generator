@@ -473,7 +473,6 @@
     var wasRetry = isRetry; // nextRound() resets the flag before the POST fires
     rounds.push({
       form_id: round.form_id,
-      form_name: round.form_name,
       display_label: round.display_label,
       scale: round.scale,
       key: round.key,
