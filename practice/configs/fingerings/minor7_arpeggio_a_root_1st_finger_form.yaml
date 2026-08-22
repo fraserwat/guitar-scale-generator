@@ -9,7 +9,7 @@ example_key: A
 tab:
   E: []                  # this form skips the low E string
   A: [12, 15]
-  D: [14, 17]
-  G: [12]
+  D: [14]
+  G: [12, 14]
   B: [13]
-  e: [12, 17]
+  e: [12]
