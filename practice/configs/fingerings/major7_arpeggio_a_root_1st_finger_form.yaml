@@ -10,6 +10,6 @@ tab:
   E: []                  # this form skips the low E string
   A: [12, 16]
   D: [14]
-  G: [13]
+  G: [13, 14]
   B: [14]
-  e: [16, 17]
+  e: [12]
