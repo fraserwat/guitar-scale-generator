@@ -40,7 +40,7 @@ class RateLimitTests(TestCase):
             _post(self.client)
         response = _post(self.client)
         self.assertEqual(response.status_code, 429)
-        self.assertIn("error", response.json())
+        self.assertIn("errors", response.json())
         retry_after = int(response["Retry-After"])
         self.assertTrue(1 <= retry_after <= 60)
 

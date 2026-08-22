@@ -1,8 +1,11 @@
 """Tests for the page and API endpoints."""
 
 import json
+from unittest import mock
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
+
+import random
 
 from practice import theory
 from practice.models import AttemptLog
@@ -13,8 +16,8 @@ ROUND_KEYS = {"scale", "key", "direction", "form_id", "form_name",
 NOTE_KEYS = {"string", "fret", "pitch_class", "note_name", "is_root"}
 
 VALID_LOG_PAYLOAD = {
-    "form_id": "minor-pentatonic-e-shape",
-    "scale": "Minor Pentatonic",
+    "form_id": "major-scale-e-root-1st-finger-form",
+    "scale": "Major Scale",
     "key": "A",
     "direction": "Ascending",
     "correct": True,
@@ -27,34 +30,133 @@ class IndexPageTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         html = resp.content.decode()
         self.assertIn('id="start-screen"', html)
-        self.assertIn('id="timer-length"', html)
+        self.assertIn('aria-label="Timer length"', html)
         self.assertIn('id="start-btn"', html)
-        self.assertIn("coming soon", html)
+        # 7-string is still promised (hover hint on the disabled segment).
+        self.assertIn('title="Coming soon"', html)
         self.assertIn("data-csrf-token", html)
+        # The title h1 is the click-to-menu hook wrapping the SVG wordmark.
+        self.assertIn("<title>ScaleRunner</title>", html)
+        self.assertIn('<h1 class="app-title" title="Back to menu">', html)
+        self.assertIn('aria-label="ScaleRunner"', html)
+        self.assertIn('role="img"', html)
+        self.assertIn(">Scale</tspan>", html)
+        self.assertIn(">Runner</tspan>", html)
 
-    def test_index_has_v2_ui_hooks(self):
-        """Category-language header slots + start-menu keyboard tip."""
+    def test_index_has_round_header_hooks(self):
+        """Round header slots + keyboard tip on the start menu."""
         html = self.client.get("/").content.decode()
         self.assertIn('id="round-label"', html)
         self.assertIn('id="round-direction"', html)
-        # Keyboard tip lives on the start menu, NOT inside the judge buttons.
-        self.assertIn('class="keyboard-tip"', html)
-        self.assertNotIn("key-hint", html)
+        self.assertIn("Tip: during a round", html)
         self.assertIn("for correct", html)
         self.assertIn("for incorrect", html)
-        # Cache-busted static includes.
-        self.assertIn("style.css?v=3", html)
-        self.assertIn("app.js?v=3", html)
+        self.assertIn('id="tab"', html)
+
+    def test_index_strings_segmented_control(self):
+        """6 is the checked default; 7 is disabled with a soon badge."""
+        html = self.client.get("/").content.decode()
+        self.assertIn('role="radiogroup"', html)
+        six = html.index('id="strings-6"')
+        seven = html.index('id="strings-7"')
+        self.assertIn('value="6"', html[six:six + 80])
+        self.assertIn("checked", html[six:six + 80])
+        self.assertIn('value="7"', html[seven:seven + 80])
+        self.assertIn("disabled", html[seven:seven + 80])
+        self.assertIn(">soon</span>", html)
+
+    @staticmethod
+    def playable_scale_ids():
+        """Scale ids with >= 1 loaded fingering form — the only ones the
+        exercise picker offers (major/minor arpeggio are config-defined
+        but have no shipped fingering forms)."""
+        return {form["scale"] for form in theory.load_fingerings().values()}
+
+    def test_index_exercise_checkboxes_match_config(self):
+        """Server-rendered from scales.yaml: every PLAYABLE scale gets a
+        checkbox (checked by default) — a new config scale with forms
+        appears with no template change; form-less scales are omitted."""
+        html = self.client.get("/").content.decode()
+        playable = self.playable_scale_ids()
+        self.assertEqual(html.count('class="exercise-checkbox"'),
+                         len(playable))
+        for scale_id in theory.load_scales():
+            with self.subTest(scale=scale_id):
+                if scale_id in playable:
+                    idx = html.index(f'value="{scale_id}"')
+                    self.assertIn("checked", html[idx:idx + 60])
+                else:
+                    self.assertNotIn(f'value="{scale_id}"', html)
+
+    def test_index_exercise_group_membership_and_order(self):
+        """Scales group (pentatonic + scale categories) before Arpeggios;
+        names in config order within each group."""
+        html = self.client.get("/").content.decode()
+        scales_at = html.index(">Scales</button>")
+        arps_at = html.index(">Arpeggios</button>")
+        self.assertLess(scales_at, arps_at)
+        playable = self.playable_scale_ids()
+        last = scales_at
+        for scale_id, spec in theory.load_scales().items():
+            if spec["category"] == "arpeggio" or scale_id not in playable:
+                continue
+            at = html.index(f">{spec['name']}</span>")
+            self.assertGreater(at, last, scale_id)
+            self.assertLess(at, arps_at, scale_id)
+            last = at
+        last = arps_at
+        for scale_id, spec in theory.load_scales().items():
+            if spec["category"] != "arpeggio" or scale_id not in playable:
+                continue
+            at = html.index(
+                f">{spec['name'].removesuffix(' Arpeggio')}</span>")
+            self.assertGreater(at, last, scale_id)
+            last = at
+
+    def test_index_arpeggio_suffix_stripped(self):
+        """Inside the Arpeggios group the redundant suffix is dropped
+        ("Major 7 Arpeggio" renders as "Major 7"); Scales names stay full."""
+        html = self.client.get("/").content.decode()
+        playable = self.playable_scale_ids()
+        for scale_id, spec in theory.load_scales().items():
+            if scale_id not in playable:
+                continue
+            with self.subTest(scale=scale_id):
+                if spec["category"] == "arpeggio":
+                    stripped = spec["name"].removesuffix(" Arpeggio")
+                    self.assertIn(f">{stripped}</span>", html)
+                    self.assertNotIn(spec["name"], html)
+                else:
+                    self.assertIn(f">{spec['name']}</span>", html)
+
+    def test_index_exercise_hint_and_headings(self):
+        html = self.client.get("/").content.decode()
+        idx = html.index('id="exercise-hint"')
+        self.assertIn("hidden", html[idx:idx + 120])  # hidden by default
+        self.assertIn("Pick at least one exercise", html)
+        self.assertIn(">Practice Exercises</span>", html)
+
+    def test_index_panel_order(self):
+        """Timer -> Strings -> Practice Exercises -> Start."""
+        html = self.client.get("/").content.decode()
+        order = [html.index('id="timer-1"'),
+                 html.index('id="strings-6"'),
+                 html.index("Practice Exercises"),
+                 html.index('id="start-btn"')]
+        self.assertEqual(order, sorted(order))
 
 
-class RoundApiTests(TestCase):
+class ValidRoundMixin:
+    """Full-schema validation of one /api/round/ payload, shared by the
+    plain round tests and the ?scales= filter tests."""
+
     def assert_valid_round(self, data):
         fingerings = theory.load_fingerings()
         scales = theory.load_scales()
 
         self.assertEqual(set(data), ROUND_KEYS)
         self.assertIn(data["scale"], theory.scale_names())
-        self.assertIn(data["key"], theory.KEYS)
+        self.assertIn(data["key"], theory.VALID_KEYS)
         self.assertIn(data["direction"], theory.DIRECTIONS)
         self.assertIn(data["form_id"], fingerings)
 
@@ -62,14 +164,14 @@ class RoundApiTests(TestCase):
         self.assertEqual(data["form_name"], form["name"])
         self.assertEqual(data["scale"], scales[form["scale"]]["name"])
 
-        # New v2 fields: category + display label + XOR-populated
-        # caged_shape / starting_finger, consistent with the config.
+        # Category + display label + XOR-populated caged_shape /
+        # starting_finger, consistent with the config.
         self.assertIn(data["category"], theory.CATEGORIES)
         self.assertEqual(data["category"], form["category"])
         self.assertEqual(data["display_label"], form["display_label"])
         self.assertEqual(data["caged_shape"], form["caged_shape"])
         self.assertEqual(data["starting_finger"], form["starting_finger"])
-        if data["category"] in ("pentatonic", "arpeggio"):
+        if data["category"] == "pentatonic":
             self.assertIsInstance(data["caged_shape"], str)
             self.assertIn(data["caged_shape"], theory.CAGED_SHAPES)
             self.assertIsNone(data["starting_finger"])
@@ -79,9 +181,12 @@ class RoundApiTests(TestCase):
             self.assertIsNone(data["caged_shape"])
             self.assertIsInstance(data["starting_finger"], int)
             self.assertIn(data["starting_finger"], (1, 2, 3, 4))
+            root_label = {"root_low_e": "E",
+                          "root_low_a": "A"}[form["anchor"]]
             self.assertEqual(
                 data["display_label"],
-                f"{theory.ordinal(data['starting_finger'])} Finger Form")
+                f"{theory.ordinal(data['starting_finger'])} Finger Form "
+                f"({root_label}-root)")
 
         # window_start = the resolved form's lowest fret, in [1, 12]
         # (octave normalisation).
@@ -100,9 +205,16 @@ class RoundApiTests(TestCase):
             self.assertIsInstance(note["is_root"], bool)
             self.assertIn(note["string"], (1, 2, 3, 4, 5, 6))
             self.assertGreaterEqual(note["fret"], 1)
-            self.assertIn(note["note_name"], theory.NOTE_NAMES)
+            # Spelling follows the served key: sharp chromatic names for
+            # sharp/natural keys, diatonic flat spelling for flat keys —
+            # either way the name must denote the note's pitch class.
             self.assertEqual(note["pitch_class"],
-                             theory.NOTE_NAMES.index(note["note_name"]))
+                             theory.note_name_to_pc(note["note_name"]))
+            if data["key"] in theory.FLAT_KEYS:
+                self.assertNotIn("#", note["note_name"])
+            else:
+                self.assertEqual(note["note_name"],
+                                 theory.NOTE_NAMES[note["pitch_class"]])
         self.assertEqual(data["window_start"],
                          min(n["fret"] for n in data["notes"]))
 
@@ -111,16 +223,18 @@ class RoundApiTests(TestCase):
         self.assertEqual(data["window_start"], window_start)
         self.assertEqual(data["notes"], notes)
 
+
+class RoundApiTests(ValidRoundMixin, TestCase):
     def test_round_ok_and_shape(self):
         resp = self.client.get("/api/round/")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp["Content-Type"], "application/json")
         self.assert_valid_round(resp.json())
 
-    def test_round_randomisation_stays_in_domain_over_100_calls(self):
+    def test_round_randomisation_stays_in_domain_over_400_calls(self):
         seen = {"scales": set(), "directions": set(), "forms": set(),
                 "keys": set(), "categories": set()}
-        for _ in range(100):
+        for _ in range(400):
             resp = self.client.get("/api/round/")
             self.assertEqual(resp.status_code, 200)
             data = resp.json()
@@ -132,18 +246,257 @@ class RoundApiTests(TestCase):
             seen["categories"].add(data["category"])
 
         # Randomisation actually varies (P(failure) is astronomically small
-        # over 100 uniform draws from the 3 shipped major-scale forms).
-        self.assertEqual(seen["categories"], {"scale"})
+        # over 400 uniform draws from the 32 shipped forms: each form is
+        # missed with p = (31/32)^400 ~ 3.1e-6).
+        self.assertEqual(seen["categories"],
+                         {"scale", "arpeggio", "pentatonic"})
         self.assertEqual(seen["directions"], {"Ascending", "Descending"})
         self.assertEqual(seen["forms"], set(theory.load_fingerings()))
         self.assertGreaterEqual(len(seen["keys"]), 5)
-        self.assertEqual(seen["scales"], {"Major Scale"})
+        # Both accidental spellings get served (flat/sharp coin flip).
+        self.assertTrue(seen["keys"] & set(theory.FLAT_KEYS))
+        self.assertTrue(seen["keys"] & set(theory.SHARP_TO_FLAT))
+        self.assertEqual(seen["scales"], {
+            "Major Scale", "Natural Minor Scale",
+            "Major 7 Arpeggio", "Dominant 7 Arpeggio",
+            "Minor 7 Arpeggio", "Minor 7b5 Arpeggio",
+            "Diminished 7 Arpeggio",
+            "Major Pentatonic", "Minor Pentatonic",
+        })
 
     def test_round_rejects_post(self):
         resp = self.client.post("/api/round/")
         self.assertEqual(resp.status_code, 405)
 
 
+class RoundKeySpellingTests(TestCase):
+    """The 50% flat/sharp presentation of accidental keys.
+
+    api_round draws random.choice(KEYS) then, for accidental roots only,
+    random.random() < 0.5 flips to the flat spelling. Both draws are
+    mocked to pin each branch deterministically for every accidental key.
+    """
+
+    @staticmethod
+    def pinned_choice(chosen_key, form_id=None):
+        """random.choice replacement keyed by argument, so tests don't
+        care how many draws the view makes or in what order."""
+        def choose(seq):
+            if seq is theory.KEYS:
+                return chosen_key
+            if seq is theory.DIRECTIONS:
+                return "Ascending"
+            return form_id or seq[0]  # the form pool
+        return choose
+
+    def get_round(self, chosen_key, coin, form_id=None):
+        """One /api/round/ with the key draw and flat/sharp coin pinned."""
+        with mock.patch("practice.views.random.choice",
+                        side_effect=self.pinned_choice(chosen_key, form_id)), \
+             mock.patch("practice.views.random.random", return_value=coin):
+            resp = self.client.get("/api/round/")
+        self.assertEqual(resp.status_code, 200)
+        return resp.json()
+
+    def test_every_accidental_key_flat_when_coin_below_half(self):
+        for sharp, flat in theory.SHARP_TO_FLAT.items():
+            with self.subTest(sharp=sharp):
+                data = self.get_round(sharp, coin=0.49999)
+                self.assertEqual(data["key"], flat)
+                # The whole payload is the flat-key resolution: flat-spelled
+                # notes, no sharps anywhere.
+                _, notes = theory.resolve_form(data["form_id"], flat)
+                self.assertEqual(data["notes"], notes)
+                for note in data["notes"]:
+                    self.assertNotIn("#", note["note_name"])
+
+    def test_every_accidental_key_sharp_when_coin_at_or_above_half(self):
+        for sharp in theory.SHARP_TO_FLAT:
+            for coin in (0.5, 0.99999):
+                with self.subTest(sharp=sharp, coin=coin):
+                    data = self.get_round(sharp, coin=coin)
+                    self.assertEqual(data["key"], sharp)
+                    for note in data["notes"]:
+                        self.assertEqual(
+                            note["note_name"],
+                            theory.NOTE_NAMES[note["pitch_class"]])
+
+    def test_natural_keys_never_flip_and_never_draw_the_coin(self):
+        naturals = [k for k in theory.KEYS if k not in theory.SHARP_TO_FLAT]
+        self.assertEqual(len(naturals), 7)
+        for key in naturals:
+            with self.subTest(key=key):
+                with mock.patch("practice.views.random.choice",
+                                side_effect=self.pinned_choice(key)), \
+                     mock.patch("practice.views.random.random") as coin:
+                    resp = self.client.get("/api/round/")
+                self.assertEqual(resp.status_code, 200)
+                self.assertEqual(resp.json()["key"], key)
+                coin.assert_not_called()
+
+    def test_gb_round_spells_cb(self):
+        """End-to-end: a Gb major-scale round spells exactly the Gb major
+        names, Cb included (form pinned — the maj7 arpeggio form has no
+        4th degree, so it never contains a Cb)."""
+        data = self.get_round(
+            "F#", coin=0.0, form_id="major-scale-e-root-1st-finger-form")
+        self.assertEqual(data["key"], "Gb")
+        self.assertEqual(data["form_id"], "major-scale-e-root-1st-finger-form")
+        names = {n["note_name"] for n in data["notes"]}
+        self.assertEqual(names, {"Gb", "Ab", "Bb", "Cb", "Db", "Eb", "F"})
+
+    def test_gb_maj7_arpeggio_round_spelling(self):
+        """The maj7 arpeggio form, flat-spelled end to end:
+        Gb maj7 arpeggio = Gb Bb Db F."""
+        data = self.get_round(
+            "F#", coin=0.0, form_id="major7-arpeggio-e-root-1st-finger-form")
+        self.assertEqual(data["key"], "Gb")
+        self.assertEqual(data["scale"], "Major 7 Arpeggio")
+        self.assertEqual(data["display_label"], "1st Finger Form (E-root)")
+        names = {n["note_name"] for n in data["notes"]}
+        self.assertEqual(names, {"Gb", "Bb", "Db", "F"})
+        # The form skips the high e string entirely.
+        self.assertNotIn(1, {n["string"] for n in data["notes"]})
+
+class RoundFilterTests(ValidRoundMixin, TestCase):
+    """GET /api/round/?scales=... — the start-menu exercise filter.
+
+    The no-param domain is already pinned by RoundApiTests' 400-call
+    test; these cover the filtered paths.
+    """
+
+    def forms_of(self, *scale_ids):
+        return {fid for fid, form in theory.load_fingerings().items()
+                if form["scale"] in scale_ids}
+
+    def test_filter_single_scale_stays_in_domain_over_100_calls(self):
+        seen = set()
+        for _ in range(100):
+            resp = self.client.get("/api/round/?scales=major_pentatonic")
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assert_valid_round(data)
+            self.assertEqual(data["scale"], "Major Pentatonic")
+            seen.add(data["form_id"])
+        # Every major-pentatonic form (and nothing else) gets served.
+        self.assertEqual(seen, self.forms_of("major_pentatonic"))
+
+    def test_filter_multi_scale(self):
+        seen_names, seen_forms = set(), set()
+        for _ in range(100):
+            resp = self.client.get(
+                "/api/round/?scales=major_scale,minor7_arpeggio")
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assert_valid_round(data)
+            seen_names.add(data["scale"])
+            seen_forms.add(data["form_id"])
+        self.assertEqual(seen_names, {"Major Scale", "Minor 7 Arpeggio"})
+        self.assertEqual(seen_forms,
+                         self.forms_of("major_scale", "minor7_arpeggio"))
+
+    def test_filter_each_scale_id_individually(self):
+        """Every playable scale id serves its rounds; a config-defined but
+        form-less id (major/minor arpeggio have no shipped forms) is a 400 —
+        never a 500 from an empty random pool."""
+        playable = {form["scale"]
+                    for form in theory.load_fingerings().values()}
+        for scale_id, spec in theory.load_scales().items():
+            with self.subTest(scale=scale_id):
+                resp = self.client.get(f"/api/round/?scales={scale_id}")
+                if scale_id in playable:
+                    self.assertEqual(resp.status_code, 200)
+                    self.assertEqual(resp.json()["scale"], spec["name"])
+                else:
+                    self.assertEqual(resp.status_code, 400)
+                    self.assertIn(scale_id, resp.json()["errors"]["scales"])
+
+    def test_filter_formless_plus_playable_id_still_serves(self):
+        """A mixed filter with one form-less id still has a pool — rounds
+        come from the playable id only."""
+        resp = self.client.get("/api/round/?scales=major_arpeggio,major_scale")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["scale"], "Major Scale")
+
+    def test_filter_all_scales_param_equivalent_to_absent(self):
+        param = ",".join(theory.load_scales())
+        for _ in range(5):
+            resp = self.client.get(f"/api/round/?scales={param}")
+            self.assertEqual(resp.status_code, 200)
+            self.assert_valid_round(resp.json())
+
+    def test_filter_unknown_id_400_names_bad_ids(self):
+        resp = self.client.get("/api/round/?scales=phrygian")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("phrygian", resp.json()["errors"]["scales"])
+
+    def test_filter_mixed_known_unknown_400_names_only_bad(self):
+        resp = self.client.get("/api/round/?scales=major_scale,phrygian,nope")
+        self.assertEqual(resp.status_code, 400)
+        message = resp.json()["errors"]["scales"]
+        self.assertIn("phrygian", message)
+        self.assertIn("nope", message)
+        # The good id is only echoed in the "(known: ...)" tail, never
+        # reported as unknown.
+        self.assertNotIn("major_scale", message.split("(known:")[0])
+
+    def test_filter_empty_value_400(self):
+        resp = self.client.get("/api/round/?scales=")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("scales", resp.json()["errors"])
+
+    def test_filter_only_commas_400(self):
+        resp = self.client.get("/api/round/?scales=,,")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("scales", resp.json()["errors"])
+
+    def test_filter_duplicate_ids_ok(self):
+        resp = self.client.get("/api/round/?scales=major_scale,major_scale")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["scale"], "Major Scale")
+
+    def test_filter_trailing_comma_tolerated(self):
+        """Documents the lenient tokenization: empty tokens are dropped."""
+        resp = self.client.get("/api/round/?scales=major_scale,")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["scale"], "Major Scale")
+
+    def test_filter_garbage_400_never_500(self):
+        cases = {
+            "space in token": "major scale",
+            "wrong case": "MAJOR_SCALE",
+            "literal percent-encoding": "%20",
+            "very long token": "x" * 500,
+            "unicode token": "мажор",
+        }
+        for label, value in cases.items():
+            with self.subTest(case=label):
+                resp = self.client.get("/api/round/", {"scales": value})
+                self.assertEqual(resp.status_code, 400)
+                self.assertIn("scales", resp.json()["errors"])
+
+    def test_filter_narrows_the_selection_pool(self):
+        """Form selection draws from exactly the filtered pool."""
+        expected = [fid for fid, form in theory.load_fingerings().items()
+                    if form["scale"] == "minor_pentatonic"]
+        with mock.patch("practice.views.random.choice",
+                        side_effect=random.choice) as spy:
+            resp = self.client.get("/api/round/?scales=minor_pentatonic")
+        self.assertEqual(resp.status_code, 200)
+        pools = [c.args[0] for c in spy.call_args_list
+                 if c.args[0] is not theory.KEYS
+                 and c.args[0] is not theory.DIRECTIONS]
+        self.assertEqual(pools, [expected])
+
+    def test_filter_post_still_405(self):
+        resp = self.client.post("/api/round/?scales=major_scale")
+        self.assertEqual(resp.status_code, 405)
+
+
+# Throttling is covered by test_ratelimit.py; disabled here so these
+# validation tests can POST freely (32 forms plus the invalid-payload
+# cases exceed the default per-minute cap inside one test-run window).
+@override_settings(API_RATE_LIMIT_PER_MINUTE=0)
 class LogApiTests(TestCase):
     def post_log(self, payload, raw=None):
         body = raw if raw is not None else json.dumps(payload)
@@ -156,46 +509,112 @@ class LogApiTests(TestCase):
         self.assertEqual(resp.json()["status"], "ok")
         self.assertEqual(AttemptLog.objects.count(), 1)
         row = AttemptLog.objects.get()
-        self.assertEqual(row.form_id, "minor-pentatonic-e-shape")
-        self.assertEqual(row.scale, "Minor Pentatonic")
+        self.assertEqual(row.form_id, "major-scale-e-root-1st-finger-form")
+        self.assertEqual(row.scale, "Major Scale")
         self.assertEqual(row.key, "A")
         self.assertEqual(row.direction, "Ascending")
         self.assertTrue(row.correct)
+        self.assertFalse(row.is_retry)
         self.assertIsNotNone(row.timestamp)
 
     def test_valid_log_correct_false(self):
         payload = {**VALID_LOG_PAYLOAD,
-                   "form_id": "major-pentatonic-e-shape",
-                   "scale": "Major Pentatonic",
+                   "form_id": "dominant7-arpeggio-e-root-1st-finger-form",
+                   "scale": "Dominant 7 Arpeggio",
                    "key": "F#",
                    "direction": "Descending",
                    "correct": False}
         resp = self.post_log(payload)
         self.assertEqual(resp.status_code, 201)
         row = AttemptLog.objects.get()
-        self.assertEqual(row.form_id, "major-pentatonic-e-shape")
-        self.assertEqual(row.scale, "Major Pentatonic")
+        self.assertEqual(row.form_id, "dominant7-arpeggio-e-root-1st-finger-form")
+        self.assertEqual(row.scale, "Dominant 7 Arpeggio")
         self.assertEqual(row.key, "F#")
         self.assertEqual(row.direction, "Descending")
         self.assertFalse(row.correct)
 
-    def test_new_v2_form_ids_and_scales_accepted(self):
-        """Arpeggio + scale-category rounds log fine (no membership check
-        on form_id, per the v1 decision; scale display names now include
-        the new families)."""
-        cases = [
-            {"form_id": "dominant7-arpeggio-a-shape",
-             "scale": "Dominant 7 Arpeggio"},
-            {"form_id": "natural-minor-scale-2nd-finger-form",
-             "scale": "Natural Minor Scale"},
-            {"form_id": "major7-arpeggio-g-shape",
-             "scale": "Major 7 Arpeggio"},
-        ]
-        for case in cases:
-            with self.subTest(**case):
-                resp = self.post_log({**VALID_LOG_PAYLOAD, **case})
+    def test_log_without_is_retry_defaults_false(self):
+        """is_retry is optional — payloads without it must keep logging fine
+        and land as first attempts (False)."""
+        resp = self.post_log(VALID_LOG_PAYLOAD)
+        self.assertEqual(resp.status_code, 201)
+        self.assertFalse(AttemptLog.objects.get().is_retry)
+
+    def test_log_is_retry_true(self):
+        resp = self.post_log({**VALID_LOG_PAYLOAD, "is_retry": True})
+        self.assertEqual(resp.status_code, 201)
+        self.assertTrue(AttemptLog.objects.get().is_retry)
+
+    def test_log_is_retry_true_correct_false(self):
+        """A failed retry — re-queued client-side, logged like any attempt."""
+        payload = {**VALID_LOG_PAYLOAD, "correct": False, "is_retry": True}
+        resp = self.post_log(payload)
+        self.assertEqual(resp.status_code, 201)
+        row = AttemptLog.objects.get()
+        self.assertFalse(row.correct)
+        self.assertTrue(row.is_retry)
+
+    def test_log_is_retry_false_explicit(self):
+        resp = self.post_log({**VALID_LOG_PAYLOAD, "is_retry": False})
+        self.assertEqual(resp.status_code, 201)
+        self.assertFalse(AttemptLog.objects.get().is_retry)
+
+    def test_log_is_retry_wrong_types_400(self):
+        bad_values = {
+            "is_retry as string": "true",
+            "is_retry as int 1": 1,
+            "is_retry as int 0": 0,
+            "is_retry as null": None,
+            "is_retry as list": [],
+            "is_retry as object": {},
+        }
+        for label, value in bad_values.items():
+            with self.subTest(case=label):
+                resp = self.post_log({**VALID_LOG_PAYLOAD, "is_retry": value})
+                self.assertEqual(resp.status_code, 400)
+                self.assertIn("is_retry", resp.json()["errors"])
+        self.assertEqual(AttemptLog.objects.count(), 0)
+
+    def test_is_retry_field_defaults_false(self):
+        """Model default backfills old rows and covers ORM creates that
+        omit the kwarg (nothing before v4 passed it)."""
+        self.assertIs(AttemptLog._meta.get_field("is_retry").default, False)
+        row = AttemptLog.objects.create(
+            form_id="major-scale-e-root-1st-finger-form",
+            scale="Major Scale", key="A", direction="Ascending", correct=True,
+        )
+        row.refresh_from_db()
+        self.assertFalse(row.is_retry)
+
+    def test_every_loaded_form_id_accepted(self):
+        """form_id is validated against the loaded fingering configs, so
+        every shipped form — whatever /api/round/ can serve — logs fine."""
+        form_ids = list(theory.load_fingerings())
+        for form_id in form_ids:
+            with self.subTest(form_id=form_id):
+                resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": form_id})
                 self.assertEqual(resp.status_code, 201)
-        self.assertEqual(AttemptLog.objects.count(), len(cases))
+        self.assertEqual(AttemptLog.objects.count(), len(form_ids))
+
+    def test_every_flat_key_accepted(self):
+        """The client echoes the served key back, so flat spellings
+        (Db, Eb, Gb, Ab, Bb) must log fine."""
+        for flat in theory.FLAT_KEYS:
+            with self.subTest(key=flat):
+                resp = self.post_log({**VALID_LOG_PAYLOAD, "key": flat})
+                self.assertEqual(resp.status_code, 201)
+        self.assertEqual(AttemptLog.objects.count(), len(theory.FLAT_KEYS))
+        self.assertEqual(
+            sorted(AttemptLog.objects.values_list("key", flat=True)),
+            sorted(theory.FLAT_KEYS),
+        )
+
+    def test_every_sharp_and_natural_key_accepted(self):
+        for key in theory.KEYS:
+            with self.subTest(key=key):
+                resp = self.post_log({**VALID_LOG_PAYLOAD, "key": key})
+                self.assertEqual(resp.status_code, 201)
+        self.assertEqual(AttemptLog.objects.count(), len(theory.KEYS))
 
     def test_invalid_json_body_400(self):
         resp = self.post_log(None, raw="{not json")
@@ -224,10 +643,13 @@ class LogApiTests(TestCase):
             "scale as int": {**VALID_LOG_PAYLOAD, "scale": 5},
             "unknown scale": {**VALID_LOG_PAYLOAD, "scale": "Phrygian"},
             "unknown key": {**VALID_LOG_PAYLOAD, "key": "H"},
+            "non-key spelling Cb": {**VALID_LOG_PAYLOAD, "key": "Cb"},
+            "non-key spelling E#": {**VALID_LOG_PAYLOAD, "key": "E#"},
+            "double-flat key": {**VALID_LOG_PAYLOAD, "key": "Bbb"},
             "unknown direction": {**VALID_LOG_PAYLOAD, "direction": "Sideways"},
             "empty form_id": {**VALID_LOG_PAYLOAD, "form_id": ""},
             "form_id as int": {**VALID_LOG_PAYLOAD, "form_id": 7},
-            "form_id too long": {**VALID_LOG_PAYLOAD, "form_id": "x" * 65},
+            "unknown form_id": {**VALID_LOG_PAYLOAD, "form_id": "no-such-form"},
         }
         for label, payload in bad_payloads.items():
             with self.subTest(case=label):
@@ -235,20 +657,22 @@ class LogApiTests(TestCase):
                 self.assertEqual(resp.status_code, 400)
         self.assertEqual(AttemptLog.objects.count(), 0)
 
-    def test_form_id_too_long_400_with_field_error(self):
-        """65 chars exceeds the model's max_length=64 → per-field 400."""
+    def test_form_id_bound_mirrors_model_column(self):
+        """theory.FORM_ID_MAX_LENGTH (Django-free module) must match the
+        AttemptLog column it exists to protect."""
+        self.assertEqual(
+            AttemptLog._meta.get_field("form_id").max_length,
+            theory.FORM_ID_MAX_LENGTH,
+        )
+
+    def test_unknown_form_id_400_with_field_error(self):
+        """form_id must name a loaded fingering form → per-field 400.
+        This also bounds the stored value: every loadable id fits the
+        model's max_length=64 column."""
         resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": "x" * 65})
         self.assertEqual(resp.status_code, 400)
         self.assertIn("form_id", resp.json()["errors"])
         self.assertEqual(AttemptLog.objects.count(), 0)
-
-    def test_form_id_at_max_length_accepted(self):
-        """Exactly 64 chars fits the column; no membership check on
-        form_id, so any 64-char string logs fine."""
-        form_id = "x" * 64
-        resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": form_id})
-        self.assertEqual(resp.status_code, 201)
-        self.assertEqual(AttemptLog.objects.get().form_id, form_id)
 
     def test_log_rejects_get(self):
         resp = self.client.get("/api/log/")

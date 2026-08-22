@@ -8,10 +8,11 @@ __pycache__/
 *.egg-info/
 .eggs/
 
-# Environment / secrets (keep .env.example tracked)
+# Environment / secrets
 .env
 .env.*
-!.env.example
+.claude/
+PLAN.md
 
 # Django
 db.sqlite3

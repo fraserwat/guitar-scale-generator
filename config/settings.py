@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Read configuration from a local .env file (see .env.example), if present.
+# Read configuration from a local .env file, if present.
 # Real environment variables take precedence over .env values.
 load_dotenv(BASE_DIR / ".env")
 
@@ -34,7 +34,8 @@ def _env_bool(name: str, default: str) -> bool:
 DEBUG = _env_bool("DJANGO_DEBUG", default="true")
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# Set DJANGO_SECRET_KEY in .env (see .env.example for how to generate one).
+# Set DJANGO_SECRET_KEY in .env; generate one with e.g.
+#   python -c "import secrets; print(secrets.token_urlsafe(50))"
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
 if not SECRET_KEY:
     if DEBUG:
@@ -65,8 +66,7 @@ ALLOWED_HOSTS = [
 
 INSTALLED_APPS = [
     # django.contrib.admin deliberately not installed: no models are
-    # registered, so its login page is pure attack surface (SECURITY_AUDIT.md
-    # M3). Re-add it (plus the URL in config/urls.py) when users/auth land.
+    # registered, so its login page would be pure attack surface.
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -162,7 +162,7 @@ API_RATE_LIMIT_PER_MINUTE = int(
 )
 
 
-# Production hardening (SECURITY_AUDIT.md H1) — applied whenever DEBUG is off.
+# Production hardening — applied whenever DEBUG is off.
 # If the app sits behind a TLS-terminating reverse proxy, also set
 # SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") and ensure the
 # proxy strips any client-supplied X-Forwarded-Proto header.

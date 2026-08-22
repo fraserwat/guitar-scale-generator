@@ -3,45 +3,169 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Guitar Scale Practice</title>
+  <title>ScaleRunner</title>
   {# ?v= busts the browser cache when static assets change; bump on JS/CSS edits #}
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=3">
+  <link rel="preload" href="{% static 'practice/fonts/archivo-black-latin.woff2' %}"
+        as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{% static 'practice/fonts/archivo-var-latin.woff2' %}"
+        as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=36">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
-    <h1 class="app-title">Guitar Scale Practice</h1>
+    <!-- The title doubles as a home link: clicking it mid-game abandons
+         the session and returns to the start menu (see app.js). -->
+    <!-- GBA-box-style wordmark: two-tone face over a thin hard extrude,
+         skewed forward for motion. Pure SVG text (system font stack, so
+         overflow stays visible as a metrics safety net across platforms). -->
+    <h1 class="app-title" title="Back to menu">
+      <svg class="logo" viewBox="0 0 236 40" width="283" height="48"
+           role="img" aria-label="ScaleRunner">
+        <defs>
+          <!-- Glossy game-box faces: lighter upper half with a hard
+               "shine line" drop at the middle (userSpaceOnUse spans the
+               glyphs' vertical extent, y 9..31 at baseline y=31). -->
+          <linearGradient id="logo-white" gradientUnits="userSpaceOnUse"
+                          x1="0" y1="9" x2="0" y2="31">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="0.5" stop-color="#f8fafd"/>
+            <stop offset="0.52" stop-color="#c9d2e0"/>
+            <stop offset="1" stop-color="#e2e8f1"/>
+          </linearGradient>
+          <linearGradient id="logo-orange" gradientUnits="userSpaceOnUse"
+                          x1="0" y1="9" x2="0" y2="31">
+            <stop offset="0" stop-color="#ffd699"/>
+            <stop offset="0.5" stop-color="#ffc27a"/>
+            <stop offset="0.52" stop-color="#f5921e"/>
+            <stop offset="1" stop-color="#ffab4a"/>
+          </linearGradient>
+          <linearGradient id="logo-shine-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+            <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.75"/>
+            <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+          </linearGradient>
+          <!-- Same lettering as the face text; confines the shine band
+               to the glyphs (userSpaceOnUse: coords match inside the
+               skewed group). -->
+          <clipPath id="logo-clip">
+            <text x="5" y="31"
+                  font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                  font-size="30" font-weight="800"
+                  letter-spacing="-0.5">ScaleRunner</text>
+          </clipPath>
+        </defs>
+        <g transform="skewX(-8)"
+           font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+           font-size="30" font-weight="800" letter-spacing="-0.5">
+          <!-- x=5 compensates the skew so the S sits on the app column
+               edge, aligned with the panel and game screen below. -->
+          <text x="5" y="31" transform="translate(4 4)"
+                fill="#4b5568"><tspan>Scale</tspan><tspan fill="#a85f1a">Runner</tspan></text>
+          <text x="5" y="31" stroke="#0c0f14" stroke-width="2.5"
+                stroke-linejoin="round" paint-order="stroke"
+                fill="url(#logo-white)"><tspan>Scale</tspan><tspan fill="url(#logo-orange)">Runner</tspan></text>
+          <!-- JRPG shine: a diagonal light band, clipped to the
+               lettering, sweeps across once per hover (the rect's
+               translateX is animated by .logo-shine-band). It rests
+               off-canvas left of the glyphs. -->
+          <g clip-path="url(#logo-clip)" aria-hidden="true">
+            <g transform="skewX(-14)">
+              <rect class="logo-shine-band" x="-60" y="2" width="34"
+                    height="38" fill="url(#logo-shine-grad)"/>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </h1>
 
     <!-- ============ Start screen ============ -->
-    <section id="start-screen" class="screen">
+    <section id="start-screen" class="screen flow">
       <div class="panel">
-        <label class="field">
-          <span class="field-label">Timer length</span>
-          <select id="timer-length">
-            <option value="1">1 minute</option>
-            <option value="2">2 minutes</option>
-            <option value="5" selected>5 minutes</option>
-            <option value="10">10 minutes</option>
-          </select>
-        </label>
+        <div class="field">
+          <span class="group-heading">Timer length</span>
+          <div class="seg-control" role="radiogroup" aria-label="Timer length"
+               style="--seg-count: 4">
+            <span class="seg-thumb" aria-hidden="true"></span>
+            <input type="radio" class="seg-input" name="timer-length"
+                   id="timer-1" value="1" autocomplete="off">
+            <label class="seg-option" for="timer-1">1 min</label>
+            <input type="radio" class="seg-input" name="timer-length"
+                   id="timer-2" value="2" autocomplete="off">
+            <label class="seg-option" for="timer-2">2 min</label>
+            <input type="radio" class="seg-input" name="timer-length"
+                   id="timer-5" value="5" autocomplete="off" checked>
+            <label class="seg-option" for="timer-5">5 min</label>
+            <input type="radio" class="seg-input" name="timer-length"
+                   id="timer-10" value="10" autocomplete="off">
+            <label class="seg-option" for="timer-10">10 min</label>
+          </div>
+        </div>
 
-        <!-- TODO(7-string): enable this toggle and add 7-string tuning
-             (low B) support in theory.py + the SVG renderer. -->
-        <label class="field field-disabled" title="Coming soon">
-          <span class="field-label">7-String <span class="badge">coming soon</span></span>
-          <input type="checkbox" id="seven-string-toggle" disabled>
-        </label>
+        <!-- TODO(7-string): enable this segment and add 7-string tuning
+             (low B) support in theory.py + the SVG renderer. The game
+             logic ignores this control for now (6 is the only selectable
+             value). -->
+        <div class="field">
+          <span class="group-heading">Strings</span>
+          <div class="seg-control" role="radiogroup" aria-label="Strings">
+            <span class="seg-thumb" aria-hidden="true"></span>
+            <input type="radio" class="seg-input" name="string-count"
+                   id="strings-6" value="6" autocomplete="off" checked>
+            <label class="seg-option" for="strings-6">6 String</label>
+            <input type="radio" class="seg-input" name="string-count"
+                   id="strings-7" value="7" autocomplete="off" disabled>
+            <label class="seg-option" for="strings-7" title="Coming soon">
+              <span class="seg-text">7 String<span class="seg-badge">soon</span></span>
+            </label>
+          </div>
+        </div>
 
-        <button id="start-btn" class="btn btn-primary">Start</button>
+        <!-- Server-rendered from configs/scales.yaml (views._exercise_groups):
+             a new scale in the config appears here automatically. All boxes
+             checked on every load — deliberately no persistence. -->
+        <div class="field">
+          <span class="group-heading">Practice Exercises</span>
+          <div class="exercise-groups">
+            {% for group in exercise_groups %}
+            <div class="exercise-group">
+              <!-- The header is a select-all/none toggle for its group. -->
+              <h3 class="group-heading">
+                <button type="button" class="group-toggle"
+                        title="Toggle all">{{ group.label }}</button>
+              </h3>
+              {% for item in group.items %}
+              <label class="exercise-option">
+                <input type="checkbox" class="exercise-checkbox"
+                       value="{{ item.id }}" autocomplete="off" checked>
+                <span class="exercise-box" aria-hidden="true"></span>
+                <span class="exercise-name">{{ item.name }}</span>
+              </label>
+              {% endfor %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- JRPG dialog bubble: absolutely positioned above Start, so
+             showing/hiding it can never move the layout. -->
+        <div class="start-wrap" id="start-wrap">
+          <p id="exercise-hint" class="dialog-bubble hidden" aria-live="polite">
+            Pick at least one exercise!</p>
+          <button id="start-btn" class="btn btn-primary">Start</button>
+        </div>
       </div>
 
-      <p class="keyboard-tip">Tip: during a round, press <kbd>SPACE</kbd> to reveal,
+      <p class="hint">Tip: during a round, press <kbd>SPACE</kbd> to reveal,
         then <kbd>,</kbd> for correct &middot; <kbd>.</kbd> for incorrect</p>
     </section>
 
     <!-- ============ Exercise screen ============ -->
-    <section id="exercise-screen" class="screen hidden">
+    <section id="exercise-screen" class="screen flow hidden">
       <div class="exercise-top">
-        <div id="timer" class="timer">5:00</div>
+        <div>
+          <div id="timer" class="timer">5:00</div>
+          <div id="round-count" class="round-count">Round 1</div>
+        </div>
         <div class="round-header">
           <!-- e.g. "C Major Pentatonic — E Shape · Descending"
                 or  "A Natural Minor Scale — 2nd Finger Form · Ascending" -->
@@ -62,12 +186,16 @@
       <svg id="neck" class="neck" viewBox="0 0 560 240" role="img"
            aria-label="Guitar neck diagram"></svg>
 
-      <!-- TODO(tab): render actual TAB numbers for the scale run here.
-           For now this is an empty visual stub. -->
-      <svg id="tab-stub" class="tab-stub" viewBox="0 0 560 130" role="img"
-           aria-label="Empty tablature staff"></svg>
-
-      <p id="hint" class="hint">Play the scale, then press <kbd>SPACE</kbd> to reveal the notes.</p>
+      <!-- TAB of the round's run: staff drawn immediately, numbers hidden
+           until the answer reveal (they'd give the position away).
+           The wrapper anchors the round-1 coaching bubble over the
+           (empty) staff; app.js hides it after the first reveal. -->
+      <div class="tab-wrap">
+        <svg id="tab" class="tab" viewBox="0 0 560 130" role="img"
+             aria-label="Tablature"></svg>
+        <p id="tab-bubble" class="dialog-bubble dialog-bubble--tab hidden"
+           aria-live="polite"></p>
+      </div>
 
       <div class="judge-buttons">
         <button id="correct-btn" class="btn btn-correct" disabled>&#10003; Correct</button>
@@ -76,14 +204,53 @@
     </section>
 
     <!-- ============ Results screen ============ -->
-    <section id="results-screen" class="screen hidden">
-      <h2>Session results</h2>
-      <p id="results-totals" class="results-totals"></p>
-      <ul id="results-list" class="results-list"></ul>
+    <!-- Summary card first, then rounds grouped by outcome. "Needs work"
+         leads: those rows are the actionable payload (the summary card
+         above already celebrates the wins). app.js fills the counts +
+         lists and hides any empty group (and the whole summary card when
+         no rounds were played). -->
+    <section id="results-screen" class="screen flow hidden">
+      <h2 class="results-heading">Session results</h2>
+
+      <div id="results-summary" class="results-summary">
+        <div class="results-summary-row">
+          <div>
+            <div id="results-score" class="results-score">0 / 0</div>
+            <div class="results-score-label">rounds correct</div>
+          </div>
+          <div id="results-pct" class="results-pct">0%</div>
+        </div>
+        <div class="results-bar" role="presentation">
+          <div id="results-bar-fill" class="results-bar-fill"></div>
+        </div>
+      </div>
+
+      <p id="results-empty" class="results-empty hidden">
+        No rounds completed — try a longer timer next time.
+      </p>
+
+      <section id="results-group-incorrect" class="results-group results-group-incorrect hidden">
+        <h3 class="group-heading results-group-title">
+          <span class="results-dot results-dot-incorrect" aria-hidden="true"></span>
+          Needs work
+          <span id="results-count-incorrect" class="results-count">0</span>
+        </h3>
+        <ul id="results-list-incorrect" class="results-list"></ul>
+      </section>
+
+      <section id="results-group-correct" class="results-group results-group-correct hidden">
+        <h3 class="group-heading results-group-title">
+          <span class="results-dot results-dot-correct" aria-hidden="true"></span>
+          Correct
+          <span id="results-count-correct" class="results-count">0</span>
+        </h3>
+        <ul id="results-list-correct" class="results-list"></ul>
+      </section>
+
       <button id="again-btn" class="btn btn-primary">Practice again</button>
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=3"></script>
+  <script src="{% static 'practice/app.js' %}?v=18"></script>
 </body>
 </html>

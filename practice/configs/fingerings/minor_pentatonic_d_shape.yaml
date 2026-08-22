@@ -1,0 +1,16 @@
+# Hand-authored TAB written in the example key A (root = D string fret 7).
+# Box 2 of 5 (Dm-shape chord; roots on the D string fret 7 and B string
+# fret 10). Sits one box above the root-position E shape.
+id: minor-pentatonic-d-shape
+scale: minor_pentatonic  # scale id from ../scales.yaml
+name: "Minor Pentatonic — D Shape"
+caged_shape: D           # pentatonic category -> CAGED shape, not starting_finger
+anchor: root_low_d       # root on the D string (fret 7 in A)
+example_key: A
+tab:
+  E: [8, 10]
+  A: [7, 10]
+  D: [7, 10]
+  G: [7, 9]
+  B: [8, 10]
+  e: [8, 10]

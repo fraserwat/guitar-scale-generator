@@ -2,9 +2,10 @@
 # root) + category.
 #
 # category drives the fingering-form label language:
-#   pentatonic | arpeggio -> CAGED shapes  ("E Shape"), `caged_shape` required
-#   scale                 -> finger forms  ("2nd Finger Form"),
-#                            `starting_finger` required
+#   pentatonic        -> CAGED shapes  ("E Shape"), `caged_shape` required
+#   scale | arpeggio  -> finger forms  ("2nd Finger Form"),
+#                        `starting_finger` required (the arpeggio forms are
+#                        derived from the same-finger scale forms)
 #
 # Adding a new scale is just a new entry here (plus fingering configs that
 # reference it in configs/fingerings/).
@@ -35,6 +36,14 @@ minor7_arpeggio:
 dominant7_arpeggio:
   name: "Dominant 7 Arpeggio"
   intervals: [0, 4, 7, 10]
+  category: arpeggio
+minor7b5_arpeggio:
+  name: "Minor 7b5 Arpeggio"
+  intervals: [0, 3, 6, 10]
+  category: arpeggio
+diminished7_arpeggio:
+  name: "Diminished 7 Arpeggio"
+  intervals: [0, 3, 6, 9]
   category: arpeggio
 major_scale:
   name: "Major Scale"

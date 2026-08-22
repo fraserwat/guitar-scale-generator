@@ -1,4 +1,4 @@
-# Exact pins for reproducible production installs (SECURITY_AUDIT.md L2).
+# Exact pins for reproducible production installs.
 # Install with:    pip install -r requirements.lock
 # Regenerate after changing requirements.txt:
 #   pip freeze > requirements.lock   (then restore this header)

@@ -1,22 +1,78 @@
-/* Guitar Scale Practice — dark theme (high-contrast: text/controls aim for
+/* ScaleRunner — dark theme (high-contrast: text/controls aim for
    WCAG AA against the background). */
 
+/* One family, two registers: Archivo Black carries the display layer
+   (wordmark, headings, timer, buttons, bubble); variable-weight Archivo
+   carries the start menu's working text. Self-hosted, latin subset.
+   The Black cut is declared across the whole weight axis so elements
+   that ask for 700/800 never get a synthetic double-bold. */
+@font-face {
+  font-family: "Archivo Black";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("fonts/archivo-black-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("fonts/archivo-var-latin.woff2") format("woff2");
+}
+
 :root {
-  --bg: #0c0f14;       /* darker background... */
+  --bg: #0c0f14;
   --panel: #161b23;
-  --line: #4b5568;     /* stronger panel/fret lines */
-  --text: #f4f7fb;     /* ...brighter text */
-  --muted: #aab5c5;    /* muted text still ~8:1 on --bg */
-  --accent: #f59f3d;   /* root notes */
+  --line: #4b5568;     /* panel/fret lines */
+  --text: #f4f7fb;
+  --muted: #aab5c5;    /* muted text, still ~8:1 on --bg */
+  --accent: #ffab4a;   /* root notes / primary actions */
   --note: #eef2f8;     /* plain scale notes */
   --green: #4ed184;
   --red: #ff7a75;
+
+  /* GBA control faces + extrudes (the wordmark's glossy shine-line
+     treatment as CSS gradients; shared by buttons, the segmented
+     control, and the exercise checkboxes). */
+  --gloss-orange: linear-gradient(180deg, #ffc98a, #ffb964 50%, #f9993a 50%, #ffab4a);
+  --gloss-green: linear-gradient(180deg, #8fe5b4, #6cdb9d 50%, #3cbf74 50%, #4ed184);
+  --gloss-red: linear-gradient(180deg, #ffa9a5, #ff8c87 50%, #f4635d 50%, #ff7a75);
+  --extrude-orange: #a85f1a;
+  --extrude-green: #1d7a45;
+  --extrude-red: #a83833;
+  --extrude-grey: #333d4d;
+
+  /* One hook per register: swapping a face is a one-line change here. */
+  --display-font: "Archivo Black", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --ui-font: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Type ramp — every UI font size comes from here (the seg-badge's
+     0.6rem micro size is the one deliberate exception). */
+  --text-xs: 0.75rem;
+  --text-sm: 0.9rem;
+  --text-md: 1rem;
+  --text-lg: 1.3rem;
+  --text-xl: 1.6rem;
+  --text-2xl: 2rem;
+
+  /* Fluid rhythm: gaps breathe with viewport height, compressing
+     smoothly on short windows (the max-height breakpoints still
+     handle column width; these handle air). */
+  --space-flow: clamp(0.65rem, 1.7svh, 1rem);
+  --space-flow-lg: clamp(1rem, 2.6svh, 1.5rem);
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
+  min-height: 100svh;
+  user-select: none;          /* stray drags highlight the UI and break the look */
+  -webkit-user-select: none;  /* Safari */
+  display: flex;
+  flex-direction: column;
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -24,81 +80,450 @@ body {
 }
 
 .app {
-  max-width: 640px;
+  max-width: 720px;
+  width: 100%;
   margin: 0 auto;
-  padding: 2rem 1rem 3rem;
+  padding: 1.25rem 1rem 2rem;
+  flex: 1;
+  display: grid;
+  /* title / space / screen / space. The 2:3 split parks the game at
+     the optical centre (slightly above geometric) instead of letting
+     it sag under the pinned title; both fr rows collapse to 0 when
+     content overflows, so scroll still works. */
+  grid-template-rows: auto 2fr auto 3fr;
 }
 
+.screen { grid-row: 3; }
+
+/* Short windows: a narrower column shrinks the width-driven diagrams. */
+@media (max-height: 780px) {
+  .app { max-width: 620px; }
+}
+@media (max-height: 700px) {
+  .app { max-width: 540px; }
+}
+
+/* The title doubles as a home link (click = back to the menu). */
 .app-title {
-  font-size: 1.4rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--muted);
-  margin: 0 0 1.5rem;
+  margin: 0 0 1rem;
+  cursor: pointer;
+  width: fit-content;  /* only the wordmark is the home-link click target */
+  line-height: 0;      /* no phantom baseline gap under the inline svg */
+}
+
+.app-title svg {
+  overflow: visible;   /* fallback-font metrics vary; never clip the mark */
+  filter: drop-shadow(0 0 8px rgba(255, 171, 74, 0.18)); /* resting glow */
+}
+
+/* CSS outranks the SVG's presentation attributes, so this covers the
+   face text AND the clip-path lettering (they must use one font or the
+   shine band drifts off the glyphs). */
+.logo text { font-family: var(--display-font); }
+
+/* Shine sweep across the wordmark, once per hover. */
+.app-title:hover .logo-shine-band {
+  animation: logo-shine 1100ms ease-out;
+}
+
+@keyframes logo-shine {
+  from { transform: translateX(0); }
+  to { transform: translateX(340px); }
 }
 
 .hidden { display: none !important; }
 
+::selection { background: var(--accent); color: #120b02; }
+
+/* Vertical rhythm: siblings in a .flow container space themselves
+   off one rule instead of ad-hoc per-element margins; children
+   override --flow-space where the rhythm genuinely differs (e.g.
+   after an extruded box). The zeroing rule replaces UA/per-element
+   block margins, so children must not set their own */
+.flow > * { margin-block: 0; }
+.flow > * + * { margin-block-start: var(--flow-space, var(--space-flow)); }
+
 /* ---- Start screen ---- */
 .panel {
   background: var(--panel);
-  border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 2rem;
+  padding: clamp(1.25rem, 3.2svh, 2rem) 2rem;
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
-  max-width: 360px;
+  gap: clamp(1.1rem, 2.8svh, 1.75rem);
+  /* No width of its own: every screen spans the .app column. */
 }
 
-.field {
+/* Big surfaces: outline border, hard extrude, faint glow. */
+.panel, .neck, .tab, .results-summary {
+  border: 2px solid #66738c;
+  box-shadow: 6px 6px 0 var(--extrude-grey), 0 0 24px rgba(255, 171, 74, 0.08);
+}
+
+/* ---- Segmented controls (Timer length, Strings) ---- */
+.seg-control {
+  position: relative;
+  --seg-count: 2; /* timer overrides to 4 inline */
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;  /* left-align controls (e.g. the 7-string box) */
-  gap: 0.5rem;
-}
-
-.field > select { align-self: stretch; }
-
-.field-label { font-size: 0.9rem; color: var(--muted); }
-
-.field-disabled { opacity: 0.6; cursor: not-allowed; }
-
-.badge {
-  font-size: 0.7rem;
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 0.1rem 0.5rem;
-  margin-left: 0.4rem;
-}
-
-select {
   background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 0.5rem;
-  font-size: 1rem;
+  overflow: hidden;
+  box-shadow: 3px 3px 0 var(--extrude-grey);
 }
 
-.btn {
-  font-size: 1rem;
-  padding: 0.6rem 1.4rem;
-  border-radius: 8px;
+/* One glossy thumb slides to the checked segment; --seg-index comes
+   from the :has() rules below, so new segments (7-string!) just work. */
+.seg-thumb {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(100% / var(--seg-count));
+  border-radius: 999px;
+  background: var(--gloss-orange);
+  transform: translateX(calc(var(--seg-index, 0) * 100%));
+  transition: transform 180ms ease;
+}
+
+.seg-control:has(.seg-input:nth-of-type(2):checked) { --seg-index: 1; }
+.seg-control:has(.seg-input:nth-of-type(3):checked) { --seg-index: 2; }
+.seg-control:has(.seg-input:nth-of-type(4):checked) { --seg-index: 3; }
+
+/* Real radios, hidden but adjacent: keyboard/AT semantics survive. */
+.seg-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.seg-option {
+  position: relative;         /* above the sliding thumb */
+  flex: 1 1 0;                /* equal segments */
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0;
+  font-family: var(--ui-font);
+  font-size: var(--text-sm);
+  font-weight: 700; /* constant weight: selection must not change metrics */
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.seg-input:checked + .seg-option { color: #120b02; }
+
+.seg-input:disabled + .seg-option { opacity: 0.55; cursor: not-allowed; }
+
+.seg-input:focus-visible + .seg-option {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* The badge takes no layout space, keeping the label dead-centre. */
+.seg-text { position: relative; }
+
+.seg-badge {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0.4rem;
+  font-family: var(--ui-font);
+  font-size: 0.6rem;
+  line-height: 1;
+  padding: 0.15rem 0.4rem;
   border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Small-caps headings at two levels: panel field labels (Timer length,
+   Strings, Practice Exercises) sit one ramp step above the nested
+   sub-group headings (Scales, Arpeggios, results groups). display:block
+   makes the bottom margin work on the span labels and h3s alike, so
+   the heading→content gap comes from one mechanism everywhere. */
+.group-heading {
+  display: block;
+  font-family: var(--display-font);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+.field > .group-heading { font-size: var(--text-sm); }
+
+/* The category sub-headers double as select-all/none toggles; hover
+   answers "is this clickable?" with the pointer and a colour lift
+   (colour-only, per the house rule). */
+.group-toggle {
+  all: unset;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.group-toggle:hover { color: var(--text); }
+
+.group-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.exercise-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.exercise-group {
+  border: 1px solid rgba(75, 85, 104, 0.45);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+}
+
+.exercise-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.25rem 0;
+  cursor: pointer;            /* whole row is the click target */
+}
+
+.exercise-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.exercise-box {
+  position: relative;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+/* Rotated border-"L" tick; the -54% is an optical nudge upward. */
+.exercise-box::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 10px;
+  border: solid #120b02;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -54%) rotate(45deg);
+  opacity: 0;
+}
+
+.exercise-option input:checked + .exercise-box {
+  background: var(--gloss-orange);
+  border-color: #0c0f14;
+  box-shadow: 2px 2px 0 var(--extrude-orange);
+}
+
+.exercise-option input:checked + .exercise-box::after { opacity: 1; }
+
+.exercise-name {
+  font-family: var(--ui-font);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  transition: color 120ms ease;
+}
+
+.exercise-option input:checked ~ .exercise-name { color: var(--text); }
+
+.exercise-option:hover .exercise-box { border-color: var(--muted); }
+
+.exercise-option input:focus-visible + .exercise-box {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* House-style speech bubble, absolute above Start: showing it can
+   never move the layout. */
+.start-wrap { position: relative; }
+
+.start-wrap:has(#start-btn:disabled) { cursor: not-allowed; }
+
+.dialog-bubble {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  --bubble-xform: translateX(-50%); /* placement variants override */
+  transform: var(--bubble-xform);
+  z-index: 1;
+  margin: 0;
+  padding: 0.75rem 1rem;
   background: var(--panel);
   color: var(--text);
-  cursor: pointer;
+  font-family: var(--display-font);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 var(--extrude-orange), 0 0 18px rgba(255, 171, 74, 0.25);
+  animation: bubble-in 140ms ease-out;
 }
 
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.dialog-bubble::before,
+.dialog-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-style: solid;
+  border-color: transparent;
+}
 
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #120b02; font-weight: 700; }
-.btn-primary:hover { filter: brightness(1.1); }
-.btn-correct:not(:disabled) { border: 2px solid var(--green); color: var(--green); font-weight: 600; }
-.btn-incorrect:not(:disabled) { border: 2px solid var(--red); color: var(--red); font-weight: 600; }
-.btn-correct:not(:disabled):hover { background: rgba(78, 209, 132, 0.2); }
-.btn-incorrect:not(:disabled):hover { background: rgba(255, 122, 117, 0.2); }
+.dialog-bubble::before { /* tail border */
+  bottom: -9px;
+  border-width: 9px 8px 0;
+  border-top-color: var(--accent);
+}
+
+.dialog-bubble::after { /* tail fill */
+  bottom: -4px;
+  border-width: 6px 5px 0;
+  border-top-color: var(--panel);
+}
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: var(--bubble-xform) scale(0.9); }
+}
+
+/* Round-1 coaching bubble floats over the (empty) TAB staff; the tail
+   points at the diagram it's talking about. Gone after first reveal.
+   pointer-events: none so the tap it invites lands on the TAB under it. */
+.dialog-bubble--tab {
+  bottom: auto;
+  top: 50%;
+  --bubble-xform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.tab-wrap { position: relative; }
+
+/* Wiggle when the locked Start is poked (app.js re-adds the class). */
+.bubble-shake { animation: bubble-shake 300ms ease; }
+
+@keyframes bubble-shake {
+  0%, 100% { transform: translateX(-50%); }
+  25% { transform: translateX(calc(-50% - 6px)); }
+  75% { transform: translateX(calc(-50% + 6px)); }
+}
+
+/* Clicks pass through the locked Start so the wrapper can shake the bubble. */
+#start-btn:disabled { pointer-events: none; }
+
+@media (max-width: 600px) {
+  .exercise-groups { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seg-option, .seg-thumb, .exercise-box, .exercise-name,
+  .group-toggle { transition: none; }
+  .app-title:hover .logo-shine-band { animation: none; }
+  #start-btn:hover::after { animation: none; }
+  .dialog-bubble, .bubble-shake, .timer-low { animation: none; }
+  .cascade { animation: none; opacity: 1; }
+}
+
+button:not(:disabled) { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+
+/* GBA buttons. Geometry lives on .btn ONLY; variants and states swap
+   colours (background/text/border-colour/--extrude) so a state flip
+   can never change a button's size. */
+.btn {
+  font-family: var(--display-font);
+  font-size: var(--text-md);
+  font-weight: 700;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  border: 2px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  --extrude: var(--extrude-grey);
+  box-shadow: 3px 3px 0 var(--extrude);
+}
+
+.btn:disabled { opacity: 0.45; }
+
+.btn:not(:disabled):hover { filter: brightness(1.07); }
+
+.btn:not(:disabled):active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--extrude);
+}
+
+.btn-primary {
+  background: var(--gloss-orange);
+  border-color: #0c0f14;
+  color: #120b02;
+  --extrude: var(--extrude-orange);
+}
+
+.btn-correct:not(:disabled) {
+  background: var(--gloss-green);
+  border-color: #0c0f14;
+  color: #04210f;
+  --extrude: var(--extrude-green);
+}
+
+.btn-incorrect:not(:disabled) {
+  background: var(--gloss-red);
+  border-color: #0c0f14;
+  color: #2b0605;
+  --extrude: var(--extrude-red);
+}
+
+/* Pre-reveal judge buttons: grey but fully legible. */
+.btn-correct:disabled,
+.btn-incorrect:disabled {
+  opacity: 1;
+  color: var(--muted);
+}
+
+/* Shine sweep on the hero button only. */
+#start-btn {
+  position: relative;
+  overflow: hidden;
+  padding-block: 0.85rem;
+  width: 100%;
+}
+
+#start-btn::after {
+  content: "";
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  left: -40px;
+  width: 30px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0),
+                              rgba(255, 255, 255, 0.7),
+                              rgba(255, 255, 255, 0));
+  transform: skewX(-14deg);
+  pointer-events: none;
+}
+
+#start-btn:hover::after { animation: btn-shine 900ms ease-out; }
+
+@keyframes btn-shine {
+  from { transform: skewX(-14deg) translateX(0); }
+  to { transform: skewX(-14deg) translateX(780px); }
+}
 
 /* ---- Exercise screen ---- */
 .exercise-top {
@@ -106,62 +531,235 @@ select {
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.75rem;
 }
 
 .timer {
-  font-size: 1.6rem;
+  font-family: var(--display-font);
+  font-size: var(--text-xl);
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
 
-.round-header { font-size: 1.3rem; text-align: right; }
-.round-form { font-size: 0.95rem; color: var(--muted); }
+/* System-status whisper under the timer (Round 1, Round 2, …). */
+.round-count {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* Final 30 seconds: the countdown ignites. */
+.timer-low {
+  color: var(--accent);
+  animation: timer-pulse 1s ease infinite;
+}
+
+@keyframes timer-pulse {
+  50% { opacity: 0.7; }
+}
+
+.round-header { font-size: var(--text-lg); text-align: right; }
+.round-form { font-size: var(--text-sm); color: var(--muted); }
 .round-key { font-weight: 700; color: var(--accent); }
 .round-scale { font-weight: 600; }
 .round-label { color: var(--text); }
 .round-sep { margin: 0 0.15rem; }
-.round-direction { color: var(--muted); font-style: italic; }
+/* Ascending/Descending pops in accent orange so the direction is
+   unmissable at a glance (same treatment in the results rows below). */
+.round-direction { color: var(--accent); font-style: italic; }
 
-.neck, .tab-stub {
+.neck, .tab {
   width: 100%;
   height: auto;
   display: block;
   background: var(--panel);
-  border: 1px solid var(--line);
   border-radius: 10px;
-  margin-bottom: 1.25rem;
 }
 
-.hint { color: var(--muted); font-size: 0.95rem; margin: 1.25rem 0; }
+/* During the question phase the diagrams are tap targets (touch has no
+   spacebar); the pointer says so. */
+.neck.revealable, .tab.revealable { cursor: pointer; }
+
+/* Extra rhythm after the extruded boxes (the 6px extrude eats into the
+   perceived gap below them) — covers the start menu's tip after the
+   panel too. */
+.tab, .hint, .judge-buttons { --flow-space: var(--space-flow-lg); }
+
+/* SVG paint (app.js only sets geometry + classes). */
+.neck .fret-line { stroke: var(--line); }
+.neck .string-line { stroke: #b8c2d2; }
+.neck .fret-label { fill: #c5cfde; font-size: 16px; }
+.tab .tab-line { stroke: var(--line); stroke-width: 1; }
+.tab .tab-label { fill: var(--muted); font-size: 13px; font-family: monospace; }
+.tab .tab-mask { fill: var(--panel); }
+.tab .tab-num { fill: var(--note); font-size: 13px; font-family: monospace; }
+
+/* Note dots: glossy orange roots, sheened dark plain notes (gradients
+   drawn into the neck svg by app.js). .root must follow .tab-num. */
+.neck .root {
+  fill: url(#dot-orange);
+  stroke: #0c0f14;
+  stroke-width: 2;
+}
+.neck .note-dot {
+  fill: url(#dot-dark);
+  stroke: var(--note);
+  stroke-width: 2.5;
+}
+.tab .root { fill: var(--accent); font-weight: 700; }
+
+/* Answer cascade: each note pops in play order (--i from app.js), so
+   the reveal itself draws the run's direction — ascending sweeps up,
+   descending sweeps down. The step (--cascade-step, set per round on
+   the dots/numbers group) shrinks with note count so every reveal
+   takes the same total time. */
+.cascade {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: note-in 160ms ease-out forwards;
+  animation-delay: calc(var(--i, 0) * var(--cascade-step, 45ms));
+}
+
+/* Both ends explicit: the implicit "to" would inherit the base
+   opacity: 0 and the pop would land invisible. */
+@keyframes note-in {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Keycaps with their own tiny extrude — pressable-looking. */
 kbd {
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid #66738c;
   border-radius: 4px;
   padding: 0.05rem 0.45rem;
   font-family: inherit;
   color: var(--text);
+  box-shadow: 0 2px 0 var(--extrude-grey);
 }
 
-.judge-buttons { display: flex; gap: 1.25rem; margin-top: 1.25rem; }
+.judge-buttons { display: flex; gap: 1.25rem; }
 
-/* Understated keyboard-shorthand tip on the start menu (kept off the
-   game-loop UI). */
-.keyboard-tip {
-  margin-top: 1.5rem;
-  max-width: 360px;   /* aligns under the start panel */
-  font-size: 0.8rem;
+/* The most-pressed controls in the app get hero targets (Fitts's law):
+   the pair splits the full column, edges aligned with the diagrams
+   above, at the same height as Start. */
+.judge-buttons .btn {
+  flex: 1 1 0;
+  padding-block: 0.85rem;
+}
+
+/* Muted inline hint text (the start-menu keyboard tip). */
+.hint {
+  font-family: var(--ui-font);
+  font-size: var(--text-sm);
   color: var(--muted);
 }
-.keyboard-tip kbd { font-size: 0.8rem; }
 
-/* ---- Results screen ---- */
-.results-totals { font-size: 1.1rem; }
+/* ---- Results screen ----
+   Hierarchy: summary card (score + progress bar) first, then rounds grouped
+   by outcome. Group tint carries the correct/incorrect meaning, so rows stay
+   free of per-item ✓/✗ clutter. */
+/* Results rhythm is airier than the game screen's; the summary card
+   stays snug under its heading. */
+#results-screen { --flow-space: clamp(1.1rem, 3svh, 1.75rem); }
+
+.results-heading {
+  font-family: var(--display-font);
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.results-summary {
+  --flow-space: var(--space-flow);
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+}
+
+.results-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.results-score {
+  font-family: var(--display-font);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.results-score-label {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+.results-pct {
+  font-family: var(--display-font);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  /* Green, not accent: it summarises the correct-ratio bar below it —
+     same datum, same encoding. */
+  color: var(--green);
+}
+
+/* Correct-ratio bar; app.js sets the fill width to the percentage. */
+.results-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.results-bar-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--gloss-green);
+  transition: width 0.5s ease;
+}
+
+.results-empty {
+  color: var(--muted);
+}
+
+/* Small-caps treatment comes from .group-heading (shared class). */
+.results-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.6rem;
+}
+
+.results-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #0c0f14;
+  flex: none;
+}
+.results-dot-correct { background: var(--gloss-green); }
+.results-dot-incorrect { background: var(--gloss-red); }
+
+.results-count {
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+}
 
 .results-list {
   list-style: none;
   padding: 0;
-  margin: 0 0 1.5rem;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -171,12 +769,26 @@ kbd {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 0.5rem 0.9rem;
+  padding: 0.55rem 0.9rem;
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
+  flex-wrap: wrap;          /* meta drops below the name on narrow screens */
+  gap: 0.15rem 1rem;
 }
 
-.results-list li.result-correct { border-left: 4px solid var(--green); }
-.results-list li.result-incorrect { border-left: 4px solid var(--red); }
-.result-mark-correct { color: var(--green); }
-.result-mark-incorrect { color: var(--red); }
+/* Faint outcome tint + left accent per group (kept subtle so the dark
+   theme, not the tint, still dominates). */
+.results-group-correct .results-list li {
+  border-left: 3px solid var(--green);
+  background: linear-gradient(90deg, rgba(78, 209, 132, 0.08), rgba(78, 209, 132, 0.02) 55%, transparent), var(--panel);
+}
+.results-group-incorrect .results-list li {
+  border-left: 3px solid var(--red);
+  background: linear-gradient(90deg, rgba(255, 122, 117, 0.08), rgba(255, 122, 117, 0.02) 55%, transparent), var(--panel);
+}
+
+.result-name { font-weight: 600; }
+.result-meta { font-size: var(--text-sm); color: var(--muted); }
+.result-direction { color: var(--accent); font-style: italic; }
+

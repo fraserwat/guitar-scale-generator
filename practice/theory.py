@@ -1,12 +1,19 @@
-"""Music theory engine for the guitar scale practice game.
+"""Music theory engine for ScaleRunner, the guitar scale practice game.
 
 Scales and fingering forms are config-driven:
   * practice/configs/scales.yaml        — scale id -> {name, intervals}
   * practice/configs/fingerings/*.yaml  — one fingering form per file
 
-Configs are validated aggressively at load time (declared shapes can contain
-typos), and loading fails loudly with an error naming the offending file,
-string, and offset.
+Each fingering form is a hand-authored TAB written in the fixed example key
+(EXAMPLE_KEY): convention — which frets a form actually uses — is empirical
+knowledge that interval math can't derive, so the TAB is the source of truth
+and the theory here acts as a validator. The loader converts the TAB to
+anchor-relative offsets once, at load time; everything downstream (transposing
+to a key, the neck diagram, the rendered TAB) derives from that.
+
+Configs are validated aggressively at load time (hand-authored TABs can
+contain typos), and loading fails loudly with an error naming the offending
+file, string, and fret.
 
 Only the config loading touches the filesystem; everything else is pure and
 unit-testable. No Django imports here.
@@ -24,11 +31,31 @@ CONFIG_DIR = Path(__file__).resolve().parent / "configs"
 SCALES_FILE = CONFIG_DIR / "scales.yaml"
 FINGERINGS_DIR = CONFIG_DIR / "fingerings"
 
-# Note names use sharps only for v1.
-# TODO: proper flat/sharp spelling per key (e.g. F major should spell Bb, not A#).
+# Canonical (sharp-spelled) chromatic note names, one per pitch class.
+# Sharp-spelled and natural keys display these names; flat-spelled keys get
+# proper per-key diatonic spelling instead (see spell_scale / resolve_form).
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
 KEYS = list(NOTE_NAMES)  # all 12 pitch classes, named with sharps
+
+# The 5 accidental (black-key) roots and their flat enharmonic spellings.
+SHARP_TO_FLAT = {"C#": "Db", "D#": "Eb", "F#": "Gb", "G#": "Ab", "A#": "Bb"}
+FLAT_TO_SHARP = {flat: sharp for sharp, flat in SHARP_TO_FLAT.items()}
+FLAT_KEYS = list(SHARP_TO_FLAT.values())
+
+# Every key spelling the app accepts: 12 sharp-spelled + 5 flat-spelled.
+VALID_KEYS = KEYS + FLAT_KEYS
+
+# Diatonic spelling machinery: the 7 letters, their natural pitch classes,
+# and how many letter steps above the root letter each semitone interval
+# sits (any kind of third = 2 letter steps, etc.; the tritone (6) is
+# spelled as a diminished fifth).
+LETTERS = "CDEFGAB"
+NATURAL_PCS = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+INTERVAL_LETTER_STEPS = {
+    0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3,
+    6: 4, 7: 4, 8: 5, 9: 5, 10: 6, 11: 6,
+}
 
 DIRECTIONS = ["Ascending", "Descending"]
 
@@ -45,13 +72,44 @@ STANDARD_TUNING = {
 # Number of fret positions shown in the display window.
 WINDOW_SIZE = 6
 
-ANCHOR_STRATEGIES = ("root_low_e",)
+# Form ids are stored in the AttemptLog.form_id column (max_length=64);
+# bounding them here keeps every loadable id insertable on strict backends
+# (SQLite would silently accept longer values). No Django import: the model
+# mirrors this constant rather than the reverse.
+FORM_ID_MAX_LENGTH = 64
+
+# Anchor strategy -> the string carrying the root that transposition anchors
+# on. Each strategy maps a key to the fret of its root on that string;
+# everything downstream (offset resolution, window computation, rendering)
+# is strategy-agnostic.
+ANCHOR_ROOT_STRINGS = {
+    "root_low_e": 6,
+    "root_low_a": 5,
+    "root_low_d": 4,  # D-shape CAGED boxes anchor on the D-string root
+    "root_low_g": 3,  # G-shape CAGED boxes anchor on the G-string root
+}
+ANCHOR_STRATEGIES = tuple(ANCHOR_ROOT_STRINGS)
+
+# All TABs are authored in this one key (root = low E fret 5). A single fixed
+# key keeps hand-authored configs directly comparable and the loader trivial.
+EXAMPLE_KEY = "A"
+
+# TAB string labels (standard tuning, low E to high e) -> string numbers.
+TAB_STRINGS = {"E": 6, "A": 5, "D": 4, "G": 3, "B": 2, "e": 1}
+
+# Semitones of each open string ABOVE the open low E — absolute pitch, not
+# pitch class. Used to reject notes that sound below the low root:
+# scale/arpeggio finger forms "start on the root" and never play below it
+# (pentatonic CAGED boxes are exempt — they span the whole position).
+STRING_BASE_SEMITONES = {6: 0, 5: 5, 4: 10, 3: 15, 2: 19, 1: 24}
 
 # Scale categories drive the fingering-form label language:
-#   pentatonic/arpeggio forms -> CAGED shapes ("E Shape")
-#   scale forms               -> finger forms ("2nd Finger Form")
+#   pentatonic forms      -> CAGED shapes ("E Shape")
+#   scale/arpeggio forms  -> finger forms ("2nd Finger Form"; the arpeggio
+#                            forms are derived from the same-finger scale
+#                            forms, so they share the finger-form language)
 CATEGORIES = ("pentatonic", "arpeggio", "scale")
-CAGED_CATEGORIES = ("pentatonic", "arpeggio")
+CAGED_CATEGORIES = ("pentatonic",)
 CAGED_SHAPES = ("C", "A", "G", "E", "D")
 
 
@@ -96,42 +154,85 @@ def ordinal(n: int) -> str:
     return f"{n}{suffix}"
 
 
-def key_to_pc(key: str) -> int:
-    """Validate a key name and return its pitch class. Raises ValueError."""
-    try:
-        return NOTE_NAMES.index(key)
-    except ValueError:
-        raise ValueError(f"Unknown key: {key!r} (expected one of {NOTE_NAMES})")
+def parse_note_name(name: str) -> tuple[str, int]:
+    """Split a spelled note into (letter, accidental offset).
 
-
-def root_fret_low_e(key: str) -> int:
-    """Fret of the root note on the low E string (string 6).
-
-    Returns 12 instead of 0 for E, so the display window always has a full
-    fret line on its left edge.
+    'Gb' -> ('G', -1), 'C#' -> ('C', 1), 'A' -> ('A', 0), 'Bbb' -> ('B', -2).
+    Raises ValueError for anything that isn't a letter plus uniform
+    accidentals.
     """
-    root_pc = key_to_pc(key)
-    fret = (root_pc - STANDARD_TUNING[6]) % 12
-    return 12 if fret == 0 else fret
+    if not isinstance(name, str) or not name or name[0] not in NATURAL_PCS:
+        raise ValueError(f"Invalid note name: {name!r}")
+    accidentals = name[1:]
+    if not accidentals:
+        offset = 0
+    elif set(accidentals) == {"#"}:
+        offset = len(accidentals)
+    elif set(accidentals) == {"b"}:
+        offset = -len(accidentals)
+    else:
+        raise ValueError(f"Invalid note name: {name!r}")
+    return name[0], offset
 
 
-# =============================================================================
-# TODO(anchor strategies): "root_low_e" is the only v1 anchor. Future anchor
-# strategies will be added here and selected per-fingering via the `anchor`
-# field of the fingering config:
-#   - CAGED shapes (5 boxes per key, anchored on different chord forms)
-#   - 3-notes-per-string positions
-#   - fully randomised window positions
-# Each strategy maps (key) -> anchor fret; everything downstream (offset
-# resolution, window computation, rendering) is strategy-agnostic.
-# =============================================================================
+def note_name_to_pc(name: str) -> int:
+    """Pitch class 0-11 of any spelled note ('Gb' -> 6, 'Cb' -> 11, 'E#' -> 5)."""
+    letter, offset = parse_note_name(name)
+    return (NATURAL_PCS[letter] + offset) % 12
+
+
+def key_to_pc(key: str) -> int:
+    """Validate a key name and return its pitch class. Raises ValueError.
+
+    Accepts the 12 sharp-spelled names plus the 5 flat enharmonic spellings
+    of the accidental keys (Db, Eb, Gb, Ab, Bb).
+    """
+    if key not in VALID_KEYS:
+        raise ValueError(f"Unknown key: {key!r} (expected one of {VALID_KEYS})")
+    return note_name_to_pc(key)
+
+
+def spell_interval(key: str, interval: int) -> str:
+    """Spell the note `interval` semitones above the root of `key`.
+
+    The spelling walks letter names from the key's own root letter, so it is
+    consistent with the key: the perfect 4th of Gb is Cb (not B), the major
+    7th of F# is E# (not F).
+    """
+    if not _is_int(interval):
+        raise ValueError(f"Interval must be an int, got {interval!r}")
+    letter, _ = parse_note_name(key)
+    root_pc = note_name_to_pc(key)
+    steps = INTERVAL_LETTER_STEPS[interval % 12]
+    target_letter = LETTERS[(LETTERS.index(letter) + steps) % 7]
+    offset = (root_pc + interval - NATURAL_PCS[target_letter]) % 12
+    if offset > 6:  # pick the nearer accidental direction (e.g. -1, not +11)
+        offset -= 12
+    return target_letter + ("#" * offset if offset >= 0 else "b" * -offset)
+
+
+def spell_scale(key: str, intervals: list[int]) -> dict[int, str]:
+    """Map pitch class -> correctly spelled note name for a scale in a key.
+
+    E.g. spell_scale('Gb', major intervals) spells Gb Ab Bb Cb Db Eb F.
+    """
+    root_pc = note_name_to_pc(key)
+    return {(root_pc + i) % 12: spell_interval(key, i) for i in intervals}
+
+
 def anchor_fret(key: str, anchor: str = "root_low_e") -> int:
-    """Return the absolute anchor fret for a key under an anchor strategy."""
-    if anchor == "root_low_e":
-        return root_fret_low_e(key)
-    raise ValueError(
-        f"Unknown anchor strategy: {anchor!r} (expected one of {ANCHOR_STRATEGIES})"
-    )
+    """Return the absolute anchor fret for a key under an anchor strategy.
+
+    The anchor fret is where the key's root sits on the strategy's root
+    string; 12 is returned instead of 0, so frets stay >= 1 and the display
+    window always has a full fret line on its left edge.
+    """
+    if anchor not in ANCHOR_ROOT_STRINGS:
+        raise ValueError(
+            f"Unknown anchor strategy: {anchor!r} (expected one of {ANCHOR_STRATEGIES})"
+        )
+    fret = (key_to_pc(key) - STANDARD_TUNING[ANCHOR_ROOT_STRINGS[anchor]]) % 12
+    return 12 if fret == 0 else fret
 
 
 # ---------------------------------------------------------------------------
@@ -192,7 +293,14 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
     if not isinstance(raw, dict):
         raise ConfigError(f"{path}: expected a mapping at the top level")
 
-    required = ("id", "scale", "name", "anchor", "offsets")
+    if "offsets" in raw:
+        raise ConfigError(
+            f"{path}: legacy 'offsets' schema — forms are now defined as a "
+            f"hand-authored 'tab' in the fixed example key {EXAMPLE_KEY!r} "
+            f"(see practice/configs/fingerings/README.md)"
+        )
+
+    required = ("id", "scale", "name", "anchor", "example_key", "tab")
     missing = [k for k in required if k not in raw]
     if missing:
         raise ConfigError(f"{path}: missing required field(s): {', '.join(missing)}")
@@ -200,6 +308,11 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
     form_id = raw["id"]
     if not isinstance(form_id, str) or not form_id.strip():
         raise ConfigError(f"{path}: 'id' must be a non-empty string")
+    if len(form_id) > FORM_ID_MAX_LENGTH:
+        raise ConfigError(
+            f"{path}: 'id' must be at most {FORM_ID_MAX_LENGTH} characters "
+            f"(the attempt-log column bound), got {len(form_id)}"
+        )
 
     scale_id = raw["scale"]
     if scale_id not in scales:
@@ -211,9 +324,17 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
     if not isinstance(raw["name"], str) or not raw["name"].strip():
         raise ConfigError(f"{path}: 'name' must be a non-empty string")
 
+    if raw["anchor"] not in ANCHOR_STRATEGIES:
+        raise ConfigError(
+            f"{path}: unknown anchor {raw['anchor']!r} "
+            f"(expected one of {ANCHOR_STRATEGIES})"
+        )
+    root_string = ANCHOR_ROOT_STRINGS[raw["anchor"]]
+    root_label = next(l for l, s in TAB_STRINGS.items() if s == root_string)
+
     # Category-dependent label field:
-    #   pentatonic/arpeggio -> caged_shape (C|A|G|E|D), starting_finger forbidden
-    #   scale               -> starting_finger (1-4), caged_shape forbidden
+    #   pentatonic      -> caged_shape (C|A|G|E|D), starting_finger forbidden
+    #   scale/arpeggio  -> starting_finger (1-4), caged_shape forbidden
     caged_shape = raw.get("caged_shape")
     starting_finger = raw.get("starting_finger")
     if category in CAGED_CATEGORIES:
@@ -229,61 +350,96 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
             )
         starting_finger = None
         display_label = f"{caged_shape} Shape"
-    else:  # category == "scale"
+    else:  # category in ("scale", "arpeggio")
         if "caged_shape" in raw:
             raise ConfigError(
-                f"{path}: 'caged_shape' is forbidden for category 'scale' "
-                f"(use 'starting_finger')"
+                f"{path}: 'caged_shape' is forbidden for category "
+                f"{category!r} (use 'starting_finger')"
             )
         if not _is_int(starting_finger) or not 1 <= starting_finger <= 4:
             raise ConfigError(
-                f"{path}: 'starting_finger' is required for category 'scale' "
-                f"and must be an int 1-4, got {starting_finger!r}"
+                f"{path}: 'starting_finger' is required for category "
+                f"{category!r} and must be an int 1-4, got {starting_finger!r}"
             )
         caged_shape = None
-        display_label = f"{ordinal(starting_finger)} Finger Form"
+        display_label = f"{ordinal(starting_finger)} Finger Form ({root_label}-root)"
 
-    if raw["anchor"] not in ANCHOR_STRATEGIES:
+    if raw["example_key"] != EXAMPLE_KEY:
         raise ConfigError(
-            f"{path}: unknown anchor {raw['anchor']!r} "
-            f"(expected one of {ANCHOR_STRATEGIES})"
+            f"{path}: 'example_key' must be {EXAMPLE_KEY!r} (all TABs are "
+            f"authored in the same fixed key), got {raw['example_key']!r}"
         )
 
-    offsets = raw["offsets"]
-    if not isinstance(offsets, dict) or set(offsets) != {1, 2, 3, 4, 5, 6}:
+    tab = raw["tab"]
+    if not isinstance(tab, dict) or set(tab) != set(TAB_STRINGS):
         raise ConfigError(
-            f"{path}: 'offsets' must have exactly the string keys 1-6, "
-            f"got {sorted(offsets) if isinstance(offsets, dict) else offsets!r}"
+            f"{path}: 'tab' must have exactly the string keys "
+            f"{list(TAB_STRINGS)} (low E to high e), got "
+            f"{sorted(tab, key=str) if isinstance(tab, dict) else tab!r}"
         )
-    for string, offs in offsets.items():
-        if not isinstance(offs, list) or not offs or not all(map(_is_int, offs)):
+    for label, frets in tab.items():
+        if not isinstance(frets, list) or not all(map(_is_int, frets)):
             raise ConfigError(
-                f"{path}: string {string}: offsets must be a non-empty list of ints"
+                f"{path}: string {label}: tab must be a list of ints "
+                f"(use [] for a string the form skips)"
             )
+        for fret in frets:
+            if fret < 1:
+                raise ConfigError(
+                    f"{path}: string {label}, fret {fret}: frets must be "
+                    f">= 1 (open strings don't transpose)"
+                )
 
-    all_offsets = [o for offs in offsets.values() for o in offs]
-    span = max(all_offsets) - min(all_offsets)
+    example_anchor = anchor_fret(EXAMPLE_KEY, raw["anchor"])  # root fret on the anchor string
+
+    all_frets = [f for frets in tab.values() for f in frets]
+    if not all_frets:
+        raise ConfigError(f"{path}: tab has no notes on any string")
+    span = max(all_frets) - min(all_frets)
     if span > WINDOW_SIZE - 1:
         raise ConfigError(
             f"{path}: form spans {span + 1} frets "
-            f"(max {WINDOW_SIZE}): offsets {min(all_offsets)}..{max(all_offsets)}"
+            f"(max {WINDOW_SIZE}): frets {min(all_frets)}..{max(all_frets)}"
         )
 
-    # Musical validation: every declared note must belong to the scale.
-    # interval = (open_pc + anchor_fret + offset - root_pc) mod 12 is
-    # key-independent for the root_low_e anchor, since
-    # anchor_fret - root_pc == -open_pc_of_low_E == 8 (mod 12).
+    # The root must appear on the anchor string — that is what transposition
+    # anchors on, so it holds for every category. The stricter "start on the
+    # root" convention (no note sounds below it) applies only to scale and
+    # arpeggio finger forms; pentatonic CAGED boxes span the whole position
+    # and may play below the root.
+    if example_anchor not in tab[root_label]:
+        raise ConfigError(
+            f"{path}: the root ({EXAMPLE_KEY} at fret {example_anchor}) must "
+            f"appear on string {root_label} — the anchor string carries the root"
+        )
+    if category not in CAGED_CATEGORIES:
+        root_abs = STRING_BASE_SEMITONES[root_string] + example_anchor
+        for label, frets in tab.items():
+            string = TAB_STRINGS[label]
+            for fret in frets:
+                if STRING_BASE_SEMITONES[string] + fret < root_abs:
+                    raise ConfigError(
+                        f"{path}: string {label}, fret {fret}: sounds below "
+                        f"the low root ({EXAMPLE_KEY} at {root_label}-string "
+                        f"fret {example_anchor}) — finger forms never play "
+                        f"below the root"
+                    )
+
+    # Musical validation in the example key: every declared note must belong
+    # to the scale. TAB_STRINGS iterates low E -> high e, so validation
+    # errors report low-string problems first (matching how guitarists read
+    # the shapes).
+    root_pc = key_to_pc(EXAMPLE_KEY)
     interval_set = set(scales[scale_id]["intervals"])
     covered = set()
-    # Iterate string 6 -> 1 so validation errors report low-string problems
-    # first (matching how guitarists read the shapes).
-    for string, offs in sorted(offsets.items(), reverse=True):
-        for offset in offs:
-            interval = (STANDARD_TUNING[string] + offset + 8) % 12
+    for label, string in TAB_STRINGS.items():
+        for fret in tab[label]:
+            pc = (STANDARD_TUNING[string] + fret) % 12
+            interval = (pc - root_pc) % 12
             if interval not in interval_set:
                 raise ConfigError(
-                    f"{path}: string {string}, offset {offset}: interval "
-                    f"{interval} is not in scale {scale_id!r} "
+                    f"{path}: string {label}, fret {fret}: {note_name(pc)} "
+                    f"(interval {interval}) is not in scale {scale_id!r} "
                     f"(intervals {sorted(interval_set)})"
                 )
             covered.add(interval)
@@ -307,8 +463,14 @@ def _validate_fingering(raw: object, path: Path, scales: Mapping[str, dict]) -> 
         "caged_shape": caged_shape,
         "starting_finger": starting_finger,
         "anchor": raw["anchor"],
-        # Stored pre-sorted so resolve_form can iterate without re-sorting.
-        "offsets": {s: sorted(offs) for s, offs in offsets.items()},
+        "tab": {label: sorted(frets) for label, frets in tab.items()},
+        # Anchor-relative offsets derived from the TAB; everything downstream
+        # (resolve_form, the diagrams) consumes these. Pre-sorted so
+        # resolve_form can iterate without re-sorting.
+        "offsets": {
+            TAB_STRINGS[label]: sorted(f - example_anchor for f in frets)
+            for label, frets in tab.items()
+        },
     }
 
 
@@ -363,6 +525,11 @@ def resolve_form(
     The display window covers frets window_start .. window_start + 5.
     is_root is True iff the note's interval from the key's root is 0.
 
+    Note spelling follows the key: sharp-spelled and natural keys use the
+    canonical sharp chromatic names; flat-spelled keys (Db, Eb, Gb, Ab, Bb)
+    spell the whole scale diatonically in flats (e.g. Gb major is
+    Gb Ab Bb Cb Db Eb F — including Cb, never B).
+
     Octave normalisation: the whole form (all strings together) is shifted
     by whole octaves until its lowest fret lands in [1, 12] — the lowest
     octave where every fret is >= 1. Open strings (fret 0) never occur, and
@@ -376,6 +543,19 @@ def resolve_form(
     form = fingerings[form_id]
     root_pc = key_to_pc(key)
     anchor = anchor_fret(key, form["anchor"])
+
+    # Per-key spelling: flat keys get a diatonic pc -> name map built from
+    # the scale's intervals. The map is total — the loader rejects any form
+    # note outside its scale — so a KeyError here means a validator bug and
+    # should surface, not be papered over.
+    if key in FLAT_KEYS:
+        scales = load_scales(scales_path)
+        spelling = spell_scale(key, scales[form["scale"]]["intervals"])
+
+        def name_of(pc: int) -> str:
+            return spelling[pc]
+    else:
+        name_of = note_name
 
     min_offset = min(o for offs in form["offsets"].values() for o in offs)
     # Octave normalisation: shift the whole form so its lowest fret is in
@@ -394,7 +574,7 @@ def resolve_form(
                 "string": string,
                 "fret": fret,
                 "pitch_class": pc,
-                "note_name": note_name(pc),
+                "note_name": name_of(pc),
                 "is_root": pc == root_pc,
             })
     return window_start, notes
