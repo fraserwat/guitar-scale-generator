@@ -9,24 +9,30 @@ from . import theory
 from .models import AttemptLog
 
 
+CHORD_MENU_GROUP_LABELS = {"core_diatonic": "Core Diatonic", "altered": "Altered"}
+
+
 def _exercise_groups():
     """Group configured scales for the start-menu exercise picker.
 
     "Scales" and "Arpeggios" are flat {label, items} groups (Arpeggios
-    strips the redundant " Arpeggio" suffix). "Chord Inv." instead nests
-    two {label, items} subgroups ("Core Diatonic", "Altered", from each
-    chord scale's menu_group) so the template can toggle them
-    independently within one column. Checkbox values are scale ids (what
-    /api/round/?scales= accepts); only scales with a loaded fingering form
-    are offered, so a checkbox never promises a round it can't serve.
+    strips the redundant " Arpeggio" suffix), one checkbox per scale.
+    "Chord Inv." instead collapses down to one checkbox per menu_group
+    ("Core Diatonic", "Altered") — its value is every currently-playable
+    scale id in that group, comma-joined, so checking it plays all of
+    them (today just Major 7 Root Position under Core Diatonic); as more
+    chord types/inversions ship, that one checkbox picks them all up
+    automatically. Checkbox values are what /api/round/?scales= accepts
+    (a bare scale id or several, comma-joined — both parse the same way);
+    only scales with a loaded fingering form are offered, and a menu_group
+    with none yet (Altered, until a diminished7 form ships) is omitted —
+    a checkbox never promises a round it can't serve.
     """
     playable = {form["scale"] for form in theory.load_fingerings().values()}
     groups = [{"label": "Scales", "items": []},
-              {"label": "Arpeggios", "items": []}]
-    chord_subgroups = {
-        "core_diatonic": {"label": "Core Diatonic", "items": []},
-        "altered": {"label": "Altered", "items": []},
-    }
+              {"label": "Arpeggios", "items": []},
+              {"label": "Chord Inv.", "items": []}]
+    chord_group_ids = {group: [] for group in theory.MENU_GROUPS}
     for scale_id, spec in theory.load_scales().items():
         if scale_id not in playable:
             continue
@@ -34,14 +40,14 @@ def _exercise_groups():
             groups[1]["items"].append(
                 {"id": scale_id, "name": spec["name"].removesuffix(" Arpeggio")})
         elif spec["category"] == "chord":
-            chord_subgroups[spec["menu_group"]]["items"].append(
-                {"id": scale_id, "name": spec["name"]})
+            chord_group_ids[spec["menu_group"]].append(scale_id)
         else:
             groups[0]["items"].append({"id": scale_id, "name": spec["name"]})
-    groups.append({
-        "label": "Chord Inv.",
-        "subgroups": [chord_subgroups["core_diatonic"], chord_subgroups["altered"]],
-    })
+    for menu_group in theory.MENU_GROUPS:
+        ids = chord_group_ids[menu_group]
+        if ids:
+            groups[2]["items"].append({"id": ",".join(ids),
+                                       "name": CHORD_MENU_GROUP_LABELS[menu_group]})
     return groups
 
 

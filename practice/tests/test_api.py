@@ -115,11 +115,14 @@ class IndexPageTests(TestCase):
 
     def test_index_arpeggio_suffix_stripped(self):
         """Inside the Arpeggios group the redundant suffix is dropped
-        ("Major 7 Arpeggio" renders as "Major 7"); Scales names stay full."""
+        ("Major 7 Arpeggio" renders as "Major 7"); Scales names stay full.
+        Chord Inv. scales don't get an individual checkbox at all — they're
+        bundled into one "Core Diatonic"/"Altered" checkbox per menu_group
+        (see test_index_chord_scales_bundled_by_menu_group)."""
         html = self.client.get("/").content.decode()
         playable = self.playable_scale_ids()
         for scale_id, spec in theory.load_scales().items():
-            if scale_id not in playable:
+            if scale_id not in playable or spec["category"] == "chord":
                 continue
             with self.subTest(scale=scale_id):
                 if spec["category"] == "arpeggio":
@@ -128,6 +131,25 @@ class IndexPageTests(TestCase):
                     self.assertNotIn(spec["name"], html)
                 else:
                     self.assertIn(f">{spec['name']}</span>", html)
+
+    def test_index_chord_scales_bundled_by_menu_group(self):
+        """Chord Inv. has one checkbox per menu_group with playable
+        content ("Core Diatonic", not one per chord type/inversion); its
+        value is every playable scale id in that group, comma-joined —
+        exactly what /api/round/?scales= already accepts."""
+        html = self.client.get("/").content.decode()
+        chord_inv_at = html.index(">Chord Inv.</button>")
+        section_end = html.index('id="start-wrap"', chord_inv_at)
+        section = html[chord_inv_at:section_end]
+        self.assertIn(">Core Diatonic</span>", section)
+        self.assertNotIn("Major 7 — Root Position", html)
+        idx = section.index('value="')
+        value = section[idx + 7:section.index('"', idx + 7)]
+        ids = value.split(",")
+        self.assertIn("major7_chord_0th_inv", ids)
+        for scale_id in ids:
+            self.assertEqual(
+                theory.load_scales()[scale_id]["menu_group"], "core_diatonic")
 
     def test_index_exercise_hint_and_headings(self):
         html = self.client.get("/").content.decode()
