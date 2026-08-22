@@ -80,7 +80,10 @@ body {
 }
 
 .app {
-  max-width: 720px;
+  /* Wide enough for the exercise picker's 3 columns (Scales, Arpeggios,
+     Chord Inv.) to sit comfortably side by side, not just the narrower
+     2-column layout everything else was originally sized for. */
+  max-width: 860px;
   width: 100%;
   margin: 0 auto;
   padding: 1.25rem 1rem 2rem;
@@ -97,10 +100,10 @@ body {
 
 /* Short windows: a narrower column shrinks the width-driven diagrams. */
 @media (max-height: 780px) {
-  .app { max-width: 620px; }
+  .app { max-width: 720px; }
 }
 @media (max-height: 700px) {
-  .app { max-width: 540px; }
+  .app { max-width: 620px; }
 }
 
 /* The title doubles as a home link (click = back to the menu). */
@@ -286,18 +289,6 @@ body {
   border-radius: 8px;
   padding: 0.75rem 0.9rem;
 }
-
-/* Chord Inv.: a plain (non-toggle) column title over two independently
-   toggleable .exercise-group rows (Core Diatonic, Altered) stacked
-   vertically — a grid item like any other .exercise-groups child, just
-   with nested content instead of a flat item list. */
-.exercise-column {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.exercise-column > .group-heading { margin-bottom: 0; }
 
 .exercise-option {
   display: flex;

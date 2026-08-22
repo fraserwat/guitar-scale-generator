@@ -127,30 +127,6 @@
           <span class="group-heading">Practice Exercises</span>
           <div class="exercise-groups">
             {% for group in exercise_groups %}
-            {% if group.subgroups %}
-            <!-- Chord Inv.: a plain column title over its two nested
-                 subgroups, each toggled independently (same markup as a
-                 top-level group, just nested one level deeper). -->
-            <div class="exercise-column">
-              <span class="group-heading">{{ group.label }}</span>
-              {% for subgroup in group.subgroups %}
-              <div class="exercise-group">
-                <h3 class="group-heading">
-                  <button type="button" class="group-toggle"
-                          title="Toggle all">{{ subgroup.label }}</button>
-                </h3>
-                {% for item in subgroup.items %}
-                <label class="exercise-option">
-                  <input type="checkbox" class="exercise-checkbox"
-                         value="{{ item.id }}" autocomplete="off" checked>
-                  <span class="exercise-box" aria-hidden="true"></span>
-                  <span class="exercise-name">{{ item.name }}</span>
-                </label>
-                {% endfor %}
-              </div>
-              {% endfor %}
-            </div>
-            {% else %}
             <div class="exercise-group">
               <!-- The header is a select-all/none toggle for its group. -->
               <h3 class="group-heading">
@@ -166,7 +142,6 @@
               </label>
               {% endfor %}
             </div>
-            {% endif %}
             {% endfor %}
           </div>
         </div>
