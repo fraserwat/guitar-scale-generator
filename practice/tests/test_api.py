@@ -296,10 +296,8 @@ _CHORD_FORM = theory._validate_fingering(
 
 
 def _chord_fingerings(*args, **kwargs):
-    """Every real shipped form plus one synthetic chord-category form, as
-    a mock side_effect standing in for load_fingerings(dir_path,
-    scales_path) — accepts any args since call sites vary (views.py calls
-    it bare; resolve_form passes both)."""
+    """Mock side_effect for load_fingerings(dir_path, scales_path): every
+    real shipped form plus one synthetic chord-category form."""
     return {**_BASE_FINGERINGS, _CHORD_FORM["id"]: _CHORD_FORM}
 
 
