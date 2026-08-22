@@ -73,14 +73,19 @@ class IndexPageTests(TestCase):
         return {form["scale"] for form in theory.load_fingerings().values()}
 
     def test_index_exercise_checkboxes_match_config(self):
-        """Server-rendered from scales.yaml: every PLAYABLE scale gets a
-        checkbox (checked by default) — a new config scale with forms
-        appears with no template change; form-less scales are omitted."""
+        """One checkbox per playable non-chord scale; chord scales bundle
+        one checkbox per menu_group instead (see the test below)."""
         html = self.client.get("/").content.decode()
+        scales = theory.load_scales()
         playable = self.playable_scale_ids()
+        non_chord = {s for s in playable if scales[s]["category"] != "chord"}
+        chord_groups = {scales[s]["menu_group"] for s in playable
+                        if scales[s]["category"] == "chord"}
         self.assertEqual(html.count('class="exercise-checkbox"'),
-                         len(playable))
-        for scale_id in theory.load_scales():
+                         len(non_chord) + len(chord_groups))
+        for scale_id in scales:
+            if scales[scale_id]["category"] == "chord":
+                continue
             with self.subTest(scale=scale_id):
                 if scale_id in playable:
                     idx = html.index(f'value="{scale_id}"')
@@ -281,8 +286,8 @@ class RoundApiTests(ValidRoundMixin, TestCase):
             seen["categories"].add(data["category"])
 
         # Randomisation actually varies (P(failure) is astronomically small
-        # over 400 uniform draws from the 45 shipped forms: each form is
-        # missed with p = (44/45)^400 ~ 1.1e-4).
+        # over 400 uniform draws from the 48 shipped forms: each form is
+        # missed with p = (47/48)^400 ~ 1.9e-4).
         self.assertEqual(seen["categories"],
                          {"scale", "arpeggio", "pentatonic", "chord"})
         # Chord Inv. rounds carry a null direction instead of Ascending/
@@ -300,6 +305,8 @@ class RoundApiTests(ValidRoundMixin, TestCase):
             "Diminished 7 Arpeggio",
             "Major Pentatonic", "Minor Pentatonic",
             "Major 7 — Root Position",
+            "Major 7 — 1st Inversion", "Major 7 — 2nd Inversion",
+            "Major 7 — 3rd Inversion",
         })
 
     def test_round_rejects_post(self):
@@ -334,9 +341,11 @@ _CHORD_FORM = theory._validate_fingering(
 
 
 def _chord_fingerings(*args, **kwargs):
-    """Mock side_effect for load_fingerings(dir_path, scales_path): every
-    real shipped form plus one synthetic chord-category form."""
-    return {**_BASE_FINGERINGS, _CHORD_FORM["id"]: _CHORD_FORM}
+    """Real shipped forms + one synthetic chord form, alone on its scale
+    (excludes real forms of that scale so ?scales= stays deterministic)."""
+    base = {form_id: form for form_id, form in _BASE_FINGERINGS.items()
+            if form["scale"] != _CHORD_FORM["scale"]}
+    return {**base, _CHORD_FORM["id"]: _CHORD_FORM}
 
 
 class ChordRoundApiTests(TestCase):
