@@ -91,13 +91,16 @@ VALID_CHORD_FORM = {
 # major and natural minor scales, the five seventh-chord arpeggios in 1st,
 # 2nd and 4th finger E-root forms plus a 1st finger A-root form (hand-authored
 # TABs derived from the same-finger major-scale forms), the five CAGED boxes
-# of each pentatonic scale, and the pilot Chord Inv. content: major7 root
-# position (0th inversion) on each of the three anchor strings.
-EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 20, "pentatonic": 10, "chord": 3}
+# of each pentatonic scale, and the shipped major7 Chord Inv. forms
+# (0th inversion x3 anchors, 1st/2nd/3rd inversion on D-root).
+EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 20, "pentatonic": 10, "chord": 6}
 EXPECTED_FORM_IDS = {
     "major7-chord-e-root-0th-inv",
     "major7-chord-a-root-0th-inv",
     "major7-chord-d-root-0th-inv",
+    "major7-chord-d-root-1st-inv",
+    "major7-chord-d-root-2nd-inv",
+    "major7-chord-d-root-3rd-inv",
     "major-pentatonic-c-shape",
     "major-pentatonic-a-shape",
     "major-pentatonic-g-shape",
@@ -158,9 +161,9 @@ def load_temp(*forms):
 
 
 class ShippedConfigTests(SimpleTestCase):
-    def test_45_configs_load_and_validate(self):
+    def test_48_configs_load_and_validate(self):
         fingerings = theory.load_fingerings()
-        self.assertEqual(len(fingerings), 45)
+        self.assertEqual(len(fingerings), 48)
 
     def test_count_by_category(self):
         """3 E-root + 3 A-root finger forms for each of the major and

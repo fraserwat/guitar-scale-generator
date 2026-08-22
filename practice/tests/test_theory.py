@@ -359,11 +359,11 @@ class TabRoundTripTests(SimpleTestCase):
                 self.assertEqual(frets_by_string(notes), expected)
 
     def test_no_note_sounds_below_the_low_root(self):
-        """'Start on the root' convention, re-checked post-load. Applies
-        to scale/arpeggio finger forms; pentatonic CAGED boxes are exempt
-        (they may play below the root)."""
+        """Scale/arpeggio only. CAGED boxes and chord forms are exempt."""
         for form_id, form in theory.load_fingerings().items():
             if form["category"] in theory.CAGED_CATEGORIES:
+                continue
+            if form["category"] == "chord":
                 continue
             with self.subTest(form=form_id):
                 root_string = theory.ANCHOR_ROOT_STRINGS[form["anchor"]]
@@ -447,7 +447,7 @@ class ResolveFormExhaustiveTests(SimpleTestCase):
     def test_every_form_every_key(self):
         fingerings = theory.load_fingerings()
         scales = theory.load_scales()
-        self.assertEqual(len(fingerings), 45)
+        self.assertEqual(len(fingerings), 48)
         for form_id, form in fingerings.items():
             intervals = set(scales[form["scale"]]["intervals"])
             all_offsets = [o for offs in form["offsets"].values() for o in offs]

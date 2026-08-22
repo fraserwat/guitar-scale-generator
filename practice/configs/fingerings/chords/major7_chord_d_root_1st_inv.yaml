@@ -1,0 +1,13 @@
+# User-drawn D-root voicing, key A. Bass = C# (major 3rd) on D string.
+id: major7-chord-d-root-1st-inv
+scale: major7_chord_1st_inv   # scale id from ../../scales.yaml
+name: "Major 7 — 1st Inversion (D-root)"
+anchor: root_low_d
+example_key: A
+tab:
+  E: []
+  A: []
+  D: [11]
+  G: [13]
+  B: [10]
+  e: [12]
