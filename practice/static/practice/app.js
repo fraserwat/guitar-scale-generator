@@ -83,6 +83,15 @@
   };
   NECK.right = NECK.left + NECK.nFrets * NECK.fretW;
   NECK.bottom = NECK.top + (NECK.nStrings - 1) * NECK.stringGap;
+  var NECK_W = 560, NECK_H = 240; // desktop viewBox dims; mobile swaps them
+
+  // Mobile: same neck, rotated 90° clockwise (chord-chart convention — nut
+  // at top, frets increase downward, low E left / high e right) via one
+  // wrapping <g transform>, not a second coordinate system. Every drawing
+  // function below stays in the original left-to-right/top-to-bottom
+  // coordinate space; this group is the only place the rotation happens.
+  // Text is the one thing the rotation would turn sideways, so fret
+  // labels get an individual counter -90° about their own anchor point.
 
   function el(name, attrs, text) {
     var node = document.createElementNS(SVG_NS, name);
@@ -135,6 +144,10 @@
    *  until the answer phase (revealed together with the note dots). */
   function drawNeck(windowStart) {
     neckSvg.textContent = "";
+    var mobile = MOBILE_QUERY.matches;
+    neckSvg.setAttribute("viewBox", mobile
+      ? "0 0 " + NECK_H + " " + NECK_W
+      : "0 0 " + NECK_W + " " + NECK_H);
 
     // Dot fills (CSS references these by id); redrawn with the neck.
     var defs = el("defs", {});
@@ -144,10 +157,21 @@
       ["#39424f", "#232b36", "#0c0f14", "#10141b"]));
     neckSvg.appendChild(defs);
 
+    // Everything else draws into `root`: the svg itself on desktop, or a
+    // rotated group on mobile (see drawNotes for why this needs an id).
+    var root = neckSvg;
+    if (mobile) {
+      root = el("g", {
+        id: "neck-rotate",
+        transform: "translate(" + NECK_H + ",0) rotate(90)"
+      });
+      neckSvg.appendChild(root);
+    }
+
     // Fret lines (vertical). Leftmost line is fret wire windowStart - 1.
     for (var i = 0; i <= NECK.nFrets; i++) {
       var x = NECK.left + i * NECK.fretW;
-      neckSvg.appendChild(el("line", {
+      root.appendChild(el("line", {
         x1: x, y1: NECK.top, x2: x, y2: NECK.bottom,
         "class": "fret-line", "stroke-width": i === 0 ? 4 : 2
       }));
@@ -155,7 +179,7 @@
 
     // Strings (horizontal), thicker towards low E.
     for (var s = 1; s <= NECK.nStrings; s++) {
-      neckSvg.appendChild(el("line", {
+      root.appendChild(el("line", {
         x1: NECK.left, y1: stringY(s), x2: NECK.right, y2: stringY(s),
         "class": "string-line", "stroke-width": 1 + (s - 1) * 0.4
       }));
@@ -163,17 +187,17 @@
 
     // Fret-number labels under each fret space, hidden during the question
     // phase. reveal() unhides the group; each new round redraws the neck so
-    // they start hidden again.
+    // they start hidden again. On mobile each label gets its own counter
+    // -90° so the parent's rotation cancels out and the digits stay upright.
     var labels = el("g", { id: "fret-labels", display: "none" });
     for (var f = 0; f < NECK.nFrets; f++) {
-      labels.appendChild(el("text", {
-        x: NECK.left + (f + 0.5) * NECK.fretW,
-        y: NECK.bottom + 35,
-        "text-anchor": "middle",
-        "class": "fret-label"
-      }, String(windowStart + f)));
+      var lx = NECK.left + (f + 0.5) * NECK.fretW;
+      var ly = NECK.bottom + 35;
+      var attrs = { x: lx, y: ly, "text-anchor": "middle", "class": "fret-label" };
+      if (mobile) attrs.transform = "rotate(-90," + lx + "," + ly + ")";
+      labels.appendChild(el("text", attrs, String(windowStart + f)));
     }
-    neckSvg.appendChild(labels);
+    root.appendChild(labels);
   }
 
   /** Unhide the fret-number labels (answer phase only). */
@@ -207,7 +231,9 @@
       dot.appendChild(el("title", {}, note.note_name));
       dots.appendChild(dot);
     });
-    neckSvg.appendChild(dots);
+    var root = MOBILE_QUERY.matches
+      ? neckSvg.querySelector("#neck-rotate") : neckSvg;
+    root.appendChild(dots);
   }
 
   // ---- TAB ------------------------------------------------------------------
