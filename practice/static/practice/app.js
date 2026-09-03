@@ -113,16 +113,16 @@
     // near-square grid, which is also the natural read for a
     // chord/scale-box diagram, so the room freed by smaller/left-
     // aligned labels goes into the grid growing, not blank margin.
-    // fretW: a couple of units under what the panel's own aspect-fit
-    // sizing would otherwise land on — CSS grid's minmax(0,1fr) doesn't
-    // perfectly shrink a percentage-max-height child sharing its row
-    // with two auto-sized siblings in every case (a known nested-fr/
-    // percentage-height circularity), so this is deliberate slack, not
-    // the exact fit; #exercise-screen also gets overflow:hidden as a
-    // hard backstop (style.css) so any residual mismatch clips rather
-    // than pushing the page past the viewport.
+    // fretW: same "let it grow, not just fit" fix as stringGap above,
+    // applied to the other axis — the box was width-bound (the width
+    // fix is right, don't touch it), leaving the fretboard visibly
+    // short of the available height. Raised until it's close to that
+    // ceiling; #exercise-screen's overflow:hidden (style.css) backstops
+    // the known small grid/percentage-height circularity (see below)
+    // so reaching slightly past the exact fit clips a couple of px
+    // rather than ever pushing the page taller than the viewport.
     left: 16, top: 14,
-    fretW: 28, stringGap: 36,
+    fretW: 50, stringGap: 36,
     nFrets: NECK.nFrets, nStrings: NECK.nStrings
   };
   NECK_MOBILE.right = NECK_MOBILE.left + NECK_MOBILE.nFrets * NECK_MOBILE.fretW;
@@ -135,14 +135,17 @@
   // desktop's NECK_H (240) as both the transform's translate amount and
   // the mobile viewBox width, so this axis is sized for what the labels
   // actually need instead of inheriting an unrelated desktop dimension.
-  var MOBILE_LEFT_INSET = 3;
+  // Split 3/14 -> 4/13: a touch more breathing room before the digit,
+  // a touch less between it and the grid (INSET + GAP unchanged, so
+  // MOBILE_ROT_WIDTH — confirmed right — doesn't move at all).
+  var MOBILE_LEFT_INSET = 4;
   var MOBILE_LABEL_W = 13;
   // Gap to the grid must clear the root dot's full bleed (radius 10 +
   // stroke 2 => ~11 past the string line, the biggest mark that can sit
   // on the leftmost/low-E string) plus a small fixed buffer, not just
   // "some gap" — otherwise a dot there visually collides with the label
   // (confirmed against real device-emulation screenshots).
-  var MOBILE_LABEL_GAP = 14;
+  var MOBILE_LABEL_GAP = 13;
   var MOBILE_ROT_WIDTH = MOBILE_LEFT_INSET + MOBILE_LABEL_W + MOBILE_LABEL_GAP
     + NECK_MOBILE.bottom;
 

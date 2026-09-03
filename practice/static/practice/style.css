@@ -832,8 +832,15 @@ kbd {
      preserveAspectRatio="xMidYMid meet" then contain-fits the diagram
      into whatever box .neck ends up with — no JS/ResizeObserver needed. */
   .app:has(#exercise-screen:not(.hidden)) {
+    /* .app is a flex item of <body>; the base rule's flex:1 expands to
+       flex-basis:0%, and a non-auto flex-basis makes the `height`
+       property below get ignored entirely for sizing (not just
+       out-competed — genuinely never consulted), regardless of
+       min-height. flex:none (grow:0 shrink:0 basis:auto) makes `height`
+       the actual basis again, so 100dvh is what .app actually becomes. */
+    flex: none;
     height: 100dvh;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto minmax(0, 1fr); /* the same fix .neck needed, one level up — plain 1fr let #exercise-screen's own row grow to fit its content instead of being capped by the viewport */
   }
   /* CSS Grid, not flex, for the fill row — deliberately. flex:1 1 0
      resolves the main-axis size (height) purely from flex-grow BEFORE
