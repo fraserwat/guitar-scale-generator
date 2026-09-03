@@ -304,6 +304,10 @@ body {
   pointer-events: none;
 }
 
+/* Mobile-only stand-in for a whole group; shown instead of the leaf list
+   under the mobile breakpoint (see @media (max-width: 640px) below). */
+.category-toggle { display: none; }
+
 .exercise-box {
   position: relative;
   flex: none;
@@ -430,14 +434,14 @@ body {
 /* Clicks pass through the locked Start so the wrapper can shake the bubble. */
 #start-btn:disabled { pointer-events: none; }
 
-@media (max-width: 600px) {
-  .exercise-groups { grid-template-columns: 1fr; }
-}
-
 /* Mobile layout breakpoint. Single source of truth — later mobile rules
-   (menu picker, TAB, fretboard orientation) key off this same value. */
+   (TAB, fretboard orientation) key off this same value. */
 @media (max-width: 640px) {
   .hint { display: none; }
+  .exercise-groups { grid-template-columns: 1fr; }
+  .exercise-group h3.group-heading,
+  .exercise-group > .exercise-option:not(.category-toggle) { display: none; }
+  .category-toggle { display: flex; }
 }
 
 @media (prefers-reduced-motion: reduce) {

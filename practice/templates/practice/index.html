@@ -9,7 +9,7 @@
         as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{% static 'practice/fonts/archivo-var-latin.woff2' %}"
         as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=37">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=38">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -133,6 +133,14 @@
                 <button type="button" class="group-toggle"
                         title="Toggle all">{{ group.label }}</button>
               </h3>
+              <!-- Mobile-only stand-in for the whole group: same checkbox
+                   visual as a leaf option, wired to the same select-all/none
+                   toggle as .group-toggle (see app.js). -->
+              <label class="exercise-option category-toggle">
+                <input type="checkbox" class="category-checkbox" checked>
+                <span class="exercise-box" aria-hidden="true"></span>
+                <span class="exercise-name">{{ group.label }}</span>
+              </label>
               {% for item in group.items %}
               <label class="exercise-option">
                 <input type="checkbox" class="exercise-checkbox"
@@ -251,6 +259,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=18"></script>
+  <script src="{% static 'practice/app.js' %}?v=19"></script>
 </body>
 </html>
