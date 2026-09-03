@@ -27,6 +27,7 @@
   var tabBubbleEl = document.getElementById("tab-bubble");
   var correctBtn = document.getElementById("correct-btn");
   var incorrectBtn = document.getElementById("incorrect-btn");
+  var judgeButtonsEl = document.querySelector(".judge-buttons");
   var resultsSummaryEl = document.getElementById("results-summary");
   var resultsScoreEl = document.getElementById("results-score");
   var resultsPctEl = document.getElementById("results-pct");
@@ -83,6 +84,69 @@
   };
   NECK.right = NECK.left + NECK.nFrets * NECK.fretW;
   NECK.bottom = NECK.top + (NECK.nStrings - 1) * NECK.stringGap;
+  var NECK_W = 560, NECK_H = 240; // desktop viewBox dims
+
+  // Mobile: same neck, rotated 90° clockwise (chord-chart convention — nut
+  // at top, frets increase downward, low E left / high e right) via one
+  // wrapping <g transform>, not a second coordinate system — drawNeck()/
+  // drawNotes() stay in the original left-to-right/top-to-bottom coordinate
+  // space; the group is the only place the rotation happens. Text is the
+  // one thing the rotation would turn sideways, so fret labels get an
+  // individual counter -90° about their own anchor point.
+  //
+  // The fret axis becomes the rotated view's HEIGHT, and desktop's spacing
+  // (tuned for a wide horizontal strip) rendered as an unusably tall,
+  // scrolling column on an actual phone. NECK_MOBILE is a denser profile
+  // for that axis only — same 6-fret window (shapes can span the full
+  // window, so nFrets can't shrink), tighter fretW/left. top/stringGap/
+  // nStrings are shared: that axis (now the rotated view's width) already
+  // fit fine.
+  var NECK_MOBILE = {
+    // top: margin on the rotated view's WIDTH axis, past the high-e
+    // string before the panel's right edge — a note dot there (radius
+    // 10 + stroke 2, i.e. bleeds ~11 past the string line) needs more
+    // than a bare gap or it crowds the panel border; see MOBILE_LABEL_GAP
+    // for the matching clearance on the label side.
+    // stringGap: wider than desktop's 30, not narrower — the panel
+    // shrink-wraps to the content's aspect ratio (style.css), so a
+    // narrow string span just shrink-wraps to a narrow panel. Sized so
+    // the string span roughly matches the fret span (~6*fretW): a
+    // near-square grid, which is also the natural read for a
+    // chord/scale-box diagram, so the room freed by smaller/left-
+    // aligned labels goes into the grid growing, not blank margin.
+    // fretW: same "let it grow, not just fit" fix as stringGap above,
+    // applied to the other axis — the box was width-bound (the width
+    // fix is right, don't touch it), leaving the fretboard visibly
+    // short of the available height. Raised until it's close to that
+    // ceiling; #exercise-screen's overflow:hidden (style.css) backstops
+    // the known small grid/percentage-height circularity (see below)
+    // so reaching slightly past the exact fit clips a couple of px
+    // rather than ever pushing the page taller than the viewport.
+    left: 16, top: 14,
+    fretW: 50, stringGap: 36,
+    nFrets: NECK.nFrets, nStrings: NECK.nStrings
+  };
+  NECK_MOBILE.right = NECK_MOBILE.left + NECK_MOBILE.nFrets * NECK_MOBILE.fretW;
+  NECK_MOBILE.bottom = NECK_MOBILE.top + (NECK_MOBILE.nStrings - 1) * NECK_MOBILE.stringGap;
+  var NECK_MOBILE_H = NECK_MOBILE.right + NECK_MOBILE.left; // rotated view's HEIGHT axis
+  var LABEL_GAP = 35; // desktop: space below the grid the label sits at
+
+  // Rotated view's WIDTH axis: left inset, left-aligned label column, a
+  // small gap, then the string span (NECK_MOBILE.bottom) — replaces
+  // desktop's NECK_H (240) as both the transform's translate amount and
+  // the mobile viewBox width, so this axis is sized for what the labels
+  // actually need instead of inheriting an unrelated desktop dimension.
+  // Split 4/13 -> 6/11: shifted further right (INSET + GAP unchanged,
+  // so MOBILE_ROT_WIDTH — confirmed right — doesn't move at all).
+  // GAP must still clear the root dot's full bleed (radius 10 + stroke
+  // 2 => ~11 past the string line, the biggest mark that can land on
+  // the leftmost/low-E string) plus a small buffer — 11 is right at
+  // that floor, verify against a revealed round before pushing further.
+  var MOBILE_LEFT_INSET = 6;
+  var MOBILE_LABEL_W = 13;
+  var MOBILE_LABEL_GAP = 11;
+  var MOBILE_ROT_WIDTH = MOBILE_LEFT_INSET + MOBILE_LABEL_W + MOBILE_LABEL_GAP
+    + NECK_MOBILE.bottom;
 
   function el(name, attrs, text) {
     var node = document.createElementNS(SVG_NS, name);
@@ -92,8 +156,8 @@
   }
 
   // y coordinate for a string number (1 = high e at top ... 6 = low E at bottom)
-  function stringY(stringNum) {
-    return NECK.top + (stringNum - 1) * NECK.stringGap;
+  function stringY(geo, stringNum) {
+    return geo.top + (stringNum - 1) * geo.stringGap;
   }
 
   /** First fret shown on the neck. The window is 6 frets wide; a 4-fret
@@ -135,6 +199,18 @@
    *  until the answer phase (revealed together with the note dots). */
   function drawNeck(windowStart) {
     neckSvg.textContent = "";
+    var mobile = MOBILE_QUERY.matches;
+    var geo = mobile ? NECK_MOBILE : NECK;
+    neckSvg.setAttribute("viewBox", mobile
+      ? "0 0 " + MOBILE_ROT_WIDTH + " " + NECK_MOBILE_H
+      : "0 0 " + NECK_W + " " + NECK_H);
+    // Belt-and-suspenders alongside the viewBox: an SVG's intrinsic
+    // ratio derived from viewBox alone isn't formally specified and has
+    // had cross-browser gaps, and style.css's mobile fill (max-width +
+    // max-height + width/height:auto) leans on that ratio to actually
+    // shrink the box on both axes, not just letterbox its content.
+    neckSvg.style.aspectRatio = mobile
+      ? MOBILE_ROT_WIDTH + " / " + NECK_MOBILE_H : "";
 
     // Dot fills (CSS references these by id); redrawn with the neck.
     var defs = el("defs", {});
@@ -144,36 +220,54 @@
       ["#39424f", "#232b36", "#0c0f14", "#10141b"]));
     neckSvg.appendChild(defs);
 
+    // Everything else draws into `root`: the svg itself on desktop, or a
+    // rotated group on mobile (see drawNotes for why this needs an id).
+    var root = neckSvg;
+    if (mobile) {
+      root = el("g", {
+        id: "neck-rotate",
+        transform: "translate(" + MOBILE_ROT_WIDTH + ",0) rotate(90)"
+      });
+      neckSvg.appendChild(root);
+    }
+
     // Fret lines (vertical). Leftmost line is fret wire windowStart - 1.
-    for (var i = 0; i <= NECK.nFrets; i++) {
-      var x = NECK.left + i * NECK.fretW;
-      neckSvg.appendChild(el("line", {
-        x1: x, y1: NECK.top, x2: x, y2: NECK.bottom,
+    for (var i = 0; i <= geo.nFrets; i++) {
+      var x = geo.left + i * geo.fretW;
+      root.appendChild(el("line", {
+        x1: x, y1: geo.top, x2: x, y2: geo.bottom,
         "class": "fret-line", "stroke-width": i === 0 ? 4 : 2
       }));
     }
 
     // Strings (horizontal), thicker towards low E.
-    for (var s = 1; s <= NECK.nStrings; s++) {
-      neckSvg.appendChild(el("line", {
-        x1: NECK.left, y1: stringY(s), x2: NECK.right, y2: stringY(s),
+    for (var s = 1; s <= geo.nStrings; s++) {
+      root.appendChild(el("line", {
+        x1: geo.left, y1: stringY(geo, s), x2: geo.right, y2: stringY(geo, s),
         "class": "string-line", "stroke-width": 1 + (s - 1) * 0.4
       }));
     }
 
     // Fret-number labels under each fret space, hidden during the question
     // phase. reveal() unhides the group; each new round redraws the neck so
-    // they start hidden again.
+    // they start hidden again. On mobile each label gets its own counter
+    // -90° so the parent's rotation cancels out and the digits stay upright
+    // — and left-aligned (not centred): the label column is a reserved
+    // width (MOBILE_LABEL_W) on the rotated view's WIDTH axis, so a
+    // centred anchor would waste half that column as symmetric padding
+    // on both sides of the digits instead of letting the grid claim it.
     var labels = el("g", { id: "fret-labels", display: "none" });
-    for (var f = 0; f < NECK.nFrets; f++) {
-      labels.appendChild(el("text", {
-        x: NECK.left + (f + 0.5) * NECK.fretW,
-        y: NECK.bottom + 35,
-        "text-anchor": "middle",
-        "class": "fret-label"
-      }, String(windowStart + f)));
+    var ly = mobile ? MOBILE_ROT_WIDTH - MOBILE_LEFT_INSET : geo.bottom + LABEL_GAP;
+    for (var f = 0; f < geo.nFrets; f++) {
+      var lx = geo.left + (f + 0.5) * geo.fretW;
+      var attrs = {
+        x: lx, y: ly, "class": "fret-label",
+        "text-anchor": mobile ? "start" : "middle"
+      };
+      if (mobile) attrs.transform = "rotate(-90," + lx + "," + ly + ")";
+      labels.appendChild(el("text", attrs, String(windowStart + f)));
     }
-    neckSvg.appendChild(labels);
+    root.appendChild(labels);
   }
 
   /** Unhide the fret-number labels (answer phase only). */
@@ -187,6 +281,8 @@
    *  draws the run's direction: notes arrive ascending, so Descending
    *  just reverses the stagger index. */
   function drawNotes(round) {
+    var mobile = MOBILE_QUERY.matches;
+    var geo = mobile ? NECK_MOBILE : NECK;
     var start = viewStart(round);
     var last = round.notes.length - 1;
     var dots = el("g", {
@@ -194,8 +290,8 @@
       style: "--cascade-step:" + cascadeStep(round.notes.length) + "ms"
     });
     round.notes.forEach(function (note, idx) {
-      var cx = NECK.left + (note.fret - start + 0.5) * NECK.fretW;
-      var cy = stringY(note.string);
+      var cx = geo.left + (note.fret - start + 0.5) * geo.fretW;
+      var cy = stringY(geo, note.string);
       var order = round.direction == null ? 0
         : round.direction === "Descending" ? last - idx : idx;
       var dot = el("circle", {
@@ -207,7 +303,8 @@
       dot.appendChild(el("title", {}, note.note_name));
       dots.appendChild(dot);
     });
-    neckSvg.appendChild(dots);
+    var root = mobile ? neckSvg.querySelector("#neck-rotate") : neckSvg;
+    root.appendChild(dots);
   }
 
   // ---- TAB ------------------------------------------------------------------
@@ -404,6 +501,39 @@
     }
   }
 
+  /** Mobile only. The fretboard fills as much vertical space as its own
+   *  aspect ratio allows (style.css), so the leftover between its bottom
+   *  edge and the screen's bottom edge varies round to round (the header
+   *  can wrap to one or two lines). CSS alone can't centre one sibling
+   *  in "whatever's left after another independently-sized sibling" —
+   *  that needs the other sibling's actual rendered size, which only
+   *  exists post-layout — so this measures it directly and nudges
+   *  .judge-buttons to split the remainder evenly above and below it,
+   *  same "redraw fresh each round" scope as drawNeck().
+   *
+   *  .judge-buttons is the LAST row of #exercise-screen's grid, so its
+   *  own bottom edge is always flush with the (overflow:hidden-clipped)
+   *  container bottom — bottomGap is structurally ~0. All the slack
+   *  shows up as topGap instead, so centring means moving the buttons
+   *  UP by half of it. transform, not margin-top: a grid item's default
+   *  align-items:stretch makes negative margin grow the stretched box
+   *  instead of shifting its position (confirmed via getBoundingClientRect
+   *  — margin-top changed, rendered position didn't move at all).
+   *  transform is a pure visual offset, uninvolved in grid sizing. */
+  function centerJudgeButtons() {
+    judgeButtonsEl.style.transform = ""; // drop any prior nudge before re-measuring
+    if (!MOBILE_QUERY.matches) return;
+    var screenBottom = exerciseScreen.getBoundingClientRect().bottom;
+    var neckBottom = neckSvg.getBoundingClientRect().bottom;
+    var judgeRect = judgeButtonsEl.getBoundingClientRect();
+    var topGap = judgeRect.top - neckBottom;
+    var bottomGap = screenBottom - judgeRect.bottom;
+    var slack = topGap - bottomGap;
+    if (slack > 0) {
+      judgeButtonsEl.style.transform = "translateY(" + (-slack / 2) + "px)";
+    }
+  }
+
   function presentRound(round) {
     currentRound = round;
     roundNum += 1;
@@ -426,6 +556,7 @@
     // Mobile has no TAB to float the coaching hint over — skip it there.
     if (revealHintDone || MOBILE_QUERY.matches) hideTabBubble();
     else showTabBubble(REVEAL_HINT);
+    centerJudgeButtons(); // after the header text/neck above, so it measures this round's real layout
     phase = "play";
   }
 
