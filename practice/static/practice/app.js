@@ -22,7 +22,6 @@
   var roundDirectionEl = document.getElementById("round-direction");
   var roundSepEl = document.getElementById("round-sep");
   var roundLabelEl = document.getElementById("round-label");
-  var neckWrapEl = document.querySelector(".neck-wrap");
   var neckSvg = document.getElementById("neck");
   var tabSvg = document.getElementById("tab");
   var tabBubbleEl = document.getElementById("tab-bubble");
@@ -48,12 +47,8 @@
     ? "Play it, then tap the diagram to reveal!"
     : "Play it, then press <kbd>SPACE</kbd> to reveal!";
   var REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
-  // Mobile: fretboard-only game screen (no TAB staff). #tab-bubble (round-1
-  // coaching hint + fetch-error notice) stays — only the staff itself hides.
-  // It's anchored over .tab-wrap by default; move it onto .neck-wrap so it
-  // still hovers over a visible diagram instead of the now-empty TAB slot.
+  // Mobile: fretboard-only game screen (no TAB staff).
   var MOBILE_QUERY = window.matchMedia("(max-width: 640px)");
-  if (MOBILE_QUERY.matches) neckWrapEl.appendChild(tabBubbleEl);
   // Every reveal takes the same total time regardless of note count:
   // the per-note delay step is derived per round (see cascadeStep) and
   // handed to .cascade via --cascade-step.
@@ -428,7 +423,8 @@
     if (!MOBILE_QUERY.matches) drawTab(round); // staff visible, numbers hidden until reveal
     neckSvg.classList.add("revealable");
     tabSvg.classList.add("revealable");
-    if (revealHintDone) hideTabBubble();
+    // Mobile has no TAB to float the coaching hint over — skip it there.
+    if (revealHintDone || MOBILE_QUERY.matches) hideTabBubble();
     else showTabBubble(REVEAL_HINT);
     phase = "play";
   }

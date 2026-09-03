@@ -420,7 +420,7 @@ body {
   pointer-events: none;
 }
 
-.tab-wrap, .neck-wrap { position: relative; }
+.tab-wrap { position: relative; }
 
 /* Wiggle when the locked Start is poked (app.js re-adds the class). */
 .bubble-shake { animation: bubble-shake 300ms ease; }
