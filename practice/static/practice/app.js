@@ -101,10 +101,11 @@
   // nStrings are shared: that axis (now the rotated view's width) already
   // fit fine.
   var NECK_MOBILE = {
-    // top: desktop's 25 was breathing room before a fret-axis-oriented
-    // diagram; here it's pure margin on the rotated view's WIDTH axis
-    // (space past the high-e string, before the panel's right edge) —
-    // trimmed tighter since mobile has less width to spare.
+    // top: margin on the rotated view's WIDTH axis, past the high-e
+    // string before the panel's right edge — a note dot there (radius
+    // 10 + stroke 2, i.e. bleeds ~11 past the string line) needs more
+    // than a bare gap or it crowds the panel border; see MOBILE_LABEL_GAP
+    // for the matching clearance on the label side.
     // stringGap: wider than desktop's 30, not narrower — the panel
     // shrink-wraps to the content's aspect ratio (style.css), so a
     // narrow string span just shrink-wraps to a narrow panel. Sized so
@@ -112,8 +113,16 @@
     // near-square grid, which is also the natural read for a
     // chord/scale-box diagram, so the room freed by smaller/left-
     // aligned labels goes into the grid growing, not blank margin.
-    left: 16, top: 10,
-    fretW: 30, stringGap: 36,
+    // fretW: a couple of units under what the panel's own aspect-fit
+    // sizing would otherwise land on — CSS grid's minmax(0,1fr) doesn't
+    // perfectly shrink a percentage-max-height child sharing its row
+    // with two auto-sized siblings in every case (a known nested-fr/
+    // percentage-height circularity), so this is deliberate slack, not
+    // the exact fit; #exercise-screen also gets overflow:hidden as a
+    // hard backstop (style.css) so any residual mismatch clips rather
+    // than pushing the page past the viewport.
+    left: 16, top: 14,
+    fretW: 28, stringGap: 36,
     nFrets: NECK.nFrets, nStrings: NECK.nStrings
   };
   NECK_MOBILE.right = NECK_MOBILE.left + NECK_MOBILE.nFrets * NECK_MOBILE.fretW;
@@ -127,7 +136,13 @@
   // the mobile viewBox width, so this axis is sized for what the labels
   // actually need instead of inheriting an unrelated desktop dimension.
   var MOBILE_LEFT_INSET = 3;
-  var MOBILE_LABEL_W = 13, MOBILE_LABEL_GAP = 5; // reserved digit width + gap to the grid
+  var MOBILE_LABEL_W = 13;
+  // Gap to the grid must clear the root dot's full bleed (radius 10 +
+  // stroke 2 => ~11 past the string line, the biggest mark that can sit
+  // on the leftmost/low-E string) plus a small fixed buffer, not just
+  // "some gap" — otherwise a dot there visually collides with the label
+  // (confirmed against real device-emulation screenshots).
+  var MOBILE_LABEL_GAP = 14;
   var MOBILE_ROT_WIDTH = MOBILE_LEFT_INSET + MOBILE_LABEL_W + MOBILE_LABEL_GAP
     + NECK_MOBILE.bottom;
 
@@ -187,6 +202,13 @@
     neckSvg.setAttribute("viewBox", mobile
       ? "0 0 " + MOBILE_ROT_WIDTH + " " + NECK_MOBILE_H
       : "0 0 " + NECK_W + " " + NECK_H);
+    // Belt-and-suspenders alongside the viewBox: an SVG's intrinsic
+    // ratio derived from viewBox alone isn't formally specified and has
+    // had cross-browser gaps, and style.css's mobile fill (max-width +
+    // max-height + width/height:auto) leans on that ratio to actually
+    // shrink the box on both axes, not just letterbox its content.
+    neckSvg.style.aspectRatio = mobile
+      ? MOBILE_ROT_WIDTH + " / " + NECK_MOBILE_H : "";
 
     // Dot fills (CSS references these by id); redrawn with the neck.
     var defs = el("defs", {});

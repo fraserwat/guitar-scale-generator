@@ -835,47 +835,48 @@ kbd {
     height: 100dvh;
     grid-template-rows: auto 1fr;
   }
+  /* CSS Grid, not flex, for the fill row — deliberately. flex:1 1 0
+     resolves the main-axis size (height) purely from flex-grow BEFORE
+     the item's aspect ratio or any cross-axis max-width is applied
+     (a long-documented flexbox/intrinsic-ratio interop gap — Firefox
+     bug 1030952, flexbugs#225, Chromium#625560): max-width alone then
+     only clips the rendered width, it can't shrink the already-resolved
+     height back down, so the box stays tall with the diagram
+     letterboxed smaller inside it — blank space, not a smaller box.
+     minmax(0, 1fr) instead gives the middle row a size fixed purely by
+     the grid track algorithm, independent of its content's aspect
+     ratio, so the child inside it can be sized by the ordinary
+     replaced-element auto-sizing algorithm (.neck below) with no race. */
   #exercise-screen {
     grid-row: 2;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto; /* top / neck fill / tab-wrap / judge-buttons */
     min-height: 0;
+    min-width: 0;
+    /* Backstop, not the primary fit: a percentage max-height sharing a
+       row with two auto-sized siblings doesn't always resolve exactly
+       (grid/percentage-height circularity), so app.js's NECK_MOBILE
+       sizing leaves a little slack — this just guarantees any residual
+       mismatch clips here instead of pushing the whole page taller
+       than the viewport. */
+    overflow: hidden;
   }
-  #exercise-screen > .exercise-top,
-  #exercise-screen > .tab-wrap,
-  #exercise-screen > .judge-buttons {
-    flex-shrink: 0;
-  }
-  /* flex-basis: 0 (not auto) is load-bearing — with auto, the browser
-     read the SVG's own aspect-ratio-implied intrinsic height as the
-     basis and let it win over the flex box, pushing the page past
-     100dvh. A zero basis makes flex-grow/shrink the only inputs, so
-     the resolved height is a hard ceiling, never overflow-driven.
-     width: auto (overriding the shared width:100% rule) then derives
-     the panel's width FROM that height via the svg's own intrinsic
-     aspect ratio (viewBox), same mechanism as height:auto normally
-     derives from width — so the panel shrink-wraps to exactly the
-     diagram's proportions instead of staying full-width with
-     preserveAspectRatio letterboxing blank panel space on the sides. */
+  /* width/height: auto + max-width/max-height: 100% is the same
+     mechanism that makes width:100%;height:auto work on desktop — both
+     axes constrained at once, no flex-grow pre-resolving either one —
+     so the box genuinely shrinks to the diagram's aspect ratio instead
+     of just letterboxing smaller content inside an oversized one.
+     margin: auto centres it in the grid cell on both axes,  and
+     aspect-ratio (app.js, matching the viewBox) is belt-and-suspenders
+     since viewBox-derived intrinsic ratio isn't formally specified. */
   .neck {
-    flex: 1 1 0;
+    min-width: 0;
     min-height: 0;
     width: auto;
-    /* max-width caps the aspect-ratio-derived width to what's actually
-       on screen. Without it, width:auto only ever looks at the
-       resolved HEIGHT — on a real phone (much taller relative to its
-       width than a square-ish test window) that derived width can
-       exceed the real viewport width and get clipped at the screen
-       edge. The max-width clamp makes the browser fall back to
-       deriving from the (now-limited) width instead — true two-axis
-       contain-fit, the same replaced-element algorithm that already
-       handles width:100%;height:auto on desktop, just triggered from
-       the other direction. */
+    height: auto;
     max-width: 100%;
-    /* align-items' default (stretch) forces the cross-axis size to fill
-       the container regardless of width:auto — override just this item
-       so its width is actually free to derive from the resolved height. */
-    align-self: center;
+    max-height: 100%;
+    margin: auto;
   }
 }
 
