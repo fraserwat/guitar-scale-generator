@@ -1,12 +1,10 @@
-import json
 import random
 
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET
 
 from . import theory
-from .models import AttemptLog
 
 
 CHORD_MENU_GROUP_LABELS = {"core_diatonic": "Core Diatonic", "altered": "Altered"}
@@ -113,56 +111,3 @@ def api_round(request):
         "window_start": window_start,
         "notes": notes,
     })
-
-
-@require_POST
-def api_log(request):
-    """Log the result of one round."""
-    try:
-        payload = json.loads(request.body)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return JsonResponse({"errors": {"body": "Invalid JSON body."}},
-                            status=400)
-    if not isinstance(payload, dict):
-        return JsonResponse({"errors": {"body": "JSON body must be an object."}},
-                            status=400)
-
-    valid_forms = theory.load_fingerings()
-    valid_scales = theory.scale_names()
-    errors = {}
-    form_id = payload.get("form_id")
-    scale = payload.get("scale")
-    key = payload.get("key")
-    direction = payload.get("direction")
-    correct = payload.get("correct")
-    is_retry = payload.get("is_retry", False)
-
-    if not isinstance(form_id, str) or form_id not in valid_forms:
-        errors["form_id"] = f"Required; must be one of {list(valid_forms)}."
-        category = None
-    else:
-        category = valid_forms[form_id]["category"]
-    if not isinstance(scale, str) or scale not in valid_scales:
-        errors["scale"] = f"Required; must be one of {valid_scales}."
-    if not isinstance(key, str) or key not in theory.VALID_KEYS:
-        errors["key"] = f"Required; must be one of {theory.VALID_KEYS}."
-    # Chord-inversion rounds carry no direction (see api_round); every other
-    # category still requires one of theory.DIRECTIONS.
-    if category == "chord":
-        if direction is not None:
-            errors["direction"] = "Must be null for chord-inversion rounds (no ascending/descending)."
-    elif not isinstance(direction, str) or direction not in theory.DIRECTIONS:
-        errors["direction"] = f"Required; must be one of {theory.DIRECTIONS}."
-    if not isinstance(correct, bool):
-        errors["correct"] = "Required; must be a JSON boolean."
-    if not isinstance(is_retry, bool):
-        errors["is_retry"] = "Optional; must be a JSON boolean."
-
-    if errors:
-        return JsonResponse({"errors": errors}, status=400)
-
-    log = AttemptLog.objects.create(
-        form_id=form_id, scale=scale, key=key, direction=direction,
-        correct=correct, is_retry=is_retry,
-    )
-    return JsonResponse({"status": "ok", "id": log.id}, status=201)

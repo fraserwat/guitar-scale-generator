@@ -72,10 +72,7 @@ STANDARD_TUNING = {
 # Number of fret positions shown in the display window.
 WINDOW_SIZE = 6
 
-# Form ids are stored in the AttemptLog.form_id column (max_length=64);
-# bounding them here keeps every loadable id insertable on strict backends
-# (SQLite would silently accept longer values). No Django import: the model
-# mirrors this constant rather than the reverse.
+# Sane upper bound on a loadable form id's length.
 FORM_ID_MAX_LENGTH = 64
 
 # Anchor strategy -> the string carrying the root that transposition anchors

@@ -77,6 +77,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves STATIC_URL directly from the WSGI app — no separate static
+    # host or collectstatic build step needed on Vercel's serverless runtime.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -155,11 +158,10 @@ STATIC_URL = "static/"
 # Where collectstatic gathers files for production serving (gitignored).
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Per-IP request cap for POST /api/log/, enforced by practice/ratelimit.py
-# over a fixed one-minute window. Set to 0 (or negative) to disable.
-API_RATE_LIMIT_PER_MINUTE = int(
-    os.environ.get("DJANGO_API_RATE_LIMIT_PER_MINUTE", "60")
-)
+# Serve directly from each app's static/ dir instead of requiring
+# collectstatic to have populated STATIC_ROOT first — Vercel's Python
+# builder has no build-command step to run collectstatic in.
+WHITENOISE_USE_FINDERS = True
 
 
 # Production hardening — applied whenever DEBUG is off.
