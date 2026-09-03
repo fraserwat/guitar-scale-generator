@@ -9,7 +9,7 @@
         as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{% static 'practice/fonts/archivo-var-latin.woff2' %}"
         as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=58">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=59">
 </head>
 <body>
   <main class="app">
@@ -194,9 +194,14 @@
       </div>
 
       <!-- Root notes are filled orange, plain scale notes outlined — no
-           legend needed; that convention is intuitive to guitarists. -->
-      <svg id="neck" class="neck" viewBox="0 0 560 240" role="img"
-           aria-label="Guitar neck diagram"></svg>
+           legend needed; that convention is intuitive to guitarists.
+           neck-wrap hard-clips the fretboard to its grid row on mobile
+           (see style.css) — a Safari bug otherwise lets it overflow into
+           the round header above it. -->
+      <div class="neck-wrap">
+        <svg id="neck" class="neck" viewBox="0 0 560 240" role="img"
+             aria-label="Guitar neck diagram"></svg>
+      </div>
 
       <!-- TAB of the round's run: staff drawn immediately, numbers hidden
            until the answer reveal (they'd give the position away).
