@@ -569,21 +569,28 @@
   exerciseChecks.forEach(function (c) {
     c.addEventListener("change", updateStartState);
   });
-  // Category sub-headers toggle their whole group: everything on,
-  // unless everything already is — then everything off.
+  // Category sub-headers (desktop) and the mobile category tickbox both
+  // toggle their whole group: everything on, unless everything already
+  // is — then everything off. Same handler either way; .closest() finds
+  // the shared .exercise-group regardless of which control fired it.
+  function toggleGroup(control) {
+    var boxes = control.closest(".exercise-group")
+      .querySelectorAll(".exercise-checkbox");
+    var allChecked = Array.prototype.every.call(boxes, function (b) {
+      return b.checked;
+    });
+    Array.prototype.forEach.call(boxes, function (b) {
+      b.checked = !allChecked;
+    });
+    updateStartState();
+  }
   Array.prototype.forEach.call(
     document.querySelectorAll(".group-toggle"), function (btn) {
-      btn.addEventListener("click", function () {
-        var boxes = btn.closest(".exercise-group")
-          .querySelectorAll(".exercise-checkbox");
-        var allChecked = Array.prototype.every.call(boxes, function (b) {
-          return b.checked;
-        });
-        Array.prototype.forEach.call(boxes, function (b) {
-          b.checked = !allChecked;
-        });
-        updateStartState();
-      });
+      btn.addEventListener("click", function () { toggleGroup(btn); });
+    });
+  Array.prototype.forEach.call(
+    document.querySelectorAll(".category-checkbox"), function (cb) {
+      cb.addEventListener("change", function () { toggleGroup(cb); });
     });
   updateStartState(); // belt-and-braces vs. browser form-state restoration
   // Poking the locked Start (clicks pass through it via CSS

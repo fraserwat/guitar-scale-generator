@@ -9,7 +9,7 @@
         as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{% static 'practice/fonts/archivo-var-latin.woff2' %}"
         as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=37">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=39">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -17,9 +17,13 @@
          the session and returns to the start menu (see app.js). -->
     <!-- GBA-box-style wordmark: two-tone face over a thin hard extrude,
          skewed forward for motion. Pure SVG text (system font stack, so
-         overflow stays visible as a metrics safety net across platforms). -->
+         overflow stays visible as a metrics safety net across platforms).
+         viewBox/width are cropped tight to the rendered glyph ink (not a
+         round number) so centering the <svg> box (mobile) also centers
+         the ink — a looser box left ~25px of dead space past the glyphs
+         that only showed up once mobile started centering this element. -->
     <h1 class="app-title" title="Back to menu">
-      <svg class="logo" viewBox="0 0 236 40" width="283" height="48"
+      <svg class="logo" viewBox="0 0 213 40" width="256" height="48"
            role="img" aria-label="ScaleRunner">
         <defs>
           <!-- Glossy game-box faces: lighter upper half with a hard
@@ -133,6 +137,14 @@
                 <button type="button" class="group-toggle"
                         title="Toggle all">{{ group.label }}</button>
               </h3>
+              <!-- Mobile-only stand-in for the whole group: same checkbox
+                   visual as a leaf option, wired to the same select-all/none
+                   toggle as .group-toggle (see app.js). -->
+              <label class="exercise-option category-toggle">
+                <input type="checkbox" class="category-checkbox" checked>
+                <span class="exercise-box" aria-hidden="true"></span>
+                <span class="exercise-name">{{ group.label }}</span>
+              </label>
               {% for item in group.items %}
               <label class="exercise-option">
                 <input type="checkbox" class="exercise-checkbox"
@@ -251,6 +263,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=18"></script>
+  <script src="{% static 'practice/app.js' %}?v=19"></script>
 </body>
 </html>
