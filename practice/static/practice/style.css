@@ -861,6 +861,17 @@ kbd {
     flex: 1 1 0;
     min-height: 0;
     width: auto;
+    /* max-width caps the aspect-ratio-derived width to what's actually
+       on screen. Without it, width:auto only ever looks at the
+       resolved HEIGHT — on a real phone (much taller relative to its
+       width than a square-ish test window) that derived width can
+       exceed the real viewport width and get clipped at the screen
+       edge. The max-width clamp makes the browser fall back to
+       deriving from the (now-limited) width instead — true two-axis
+       contain-fit, the same replaced-element algorithm that already
+       handles width:100%;height:auto on desktop, just triggered from
+       the other direction. */
+    max-width: 100%;
     /* align-items' default (stretch) forces the cross-axis size to fill
        the container regardless of width:auto — override just this item
        so its width is actually free to derive from the resolved height. */
