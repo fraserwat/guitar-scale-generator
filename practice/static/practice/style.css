@@ -420,7 +420,7 @@ body {
   pointer-events: none;
 }
 
-.tab-wrap { position: relative; }
+.tab-wrap, .neck-wrap { position: relative; }
 
 /* Wiggle when the locked Start is poked (app.js re-adds the class). */
 .bubble-shake { animation: bubble-shake 300ms ease; }
@@ -446,6 +446,10 @@ body {
   /* Category tickboxes read as one list under "Practice Exercises",
      not three separate panels — drop the desktop group border. */
   .exercise-group { border: none; padding: 0; }
+  /* Fretboard-only game screen. Hide the staff itself, not .tab-wrap —
+     #tab-bubble (round-1 coaching hint + fetch-error notice) lives in
+     that wrapper and must keep working. */
+  #tab { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

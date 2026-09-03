@@ -9,7 +9,7 @@
         as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{% static 'practice/fonts/archivo-var-latin.woff2' %}"
         as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=39">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=41">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -194,9 +194,14 @@
       </div>
 
       <!-- Root notes are filled orange, plain scale notes outlined — no
-           legend needed; that convention is intuitive to guitarists. -->
-      <svg id="neck" class="neck" viewBox="0 0 560 240" role="img"
-           aria-label="Guitar neck diagram"></svg>
+           legend needed; that convention is intuitive to guitarists.
+           The wrapper is a second anchor point for #tab-bubble: on
+           mobile (no TAB), app.js reparents the bubble here so it
+           still hovers over a visible diagram. -->
+      <div class="neck-wrap">
+        <svg id="neck" class="neck" viewBox="0 0 560 240" role="img"
+             aria-label="Guitar neck diagram"></svg>
+      </div>
 
       <!-- TAB of the round's run: staff drawn immediately, numbers hidden
            until the answer reveal (they'd give the position away).
@@ -263,6 +268,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=19"></script>
+  <script src="{% static 'practice/app.js' %}?v=21"></script>
 </body>
 </html>

@@ -22,6 +22,7 @@
   var roundDirectionEl = document.getElementById("round-direction");
   var roundSepEl = document.getElementById("round-sep");
   var roundLabelEl = document.getElementById("round-label");
+  var neckWrapEl = document.querySelector(".neck-wrap");
   var neckSvg = document.getElementById("neck");
   var tabSvg = document.getElementById("tab");
   var tabBubbleEl = document.getElementById("tab-bubble");
@@ -47,6 +48,12 @@
     ? "Play it, then tap the diagram to reveal!"
     : "Play it, then press <kbd>SPACE</kbd> to reveal!";
   var REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
+  // Mobile: fretboard-only game screen (no TAB staff). #tab-bubble (round-1
+  // coaching hint + fetch-error notice) stays — only the staff itself hides.
+  // It's anchored over .tab-wrap by default; move it onto .neck-wrap so it
+  // still hovers over a visible diagram instead of the now-empty TAB slot.
+  var MOBILE_QUERY = window.matchMedia("(max-width: 640px)");
+  if (MOBILE_QUERY.matches) neckWrapEl.appendChild(tabBubbleEl);
   // Every reveal takes the same total time regardless of note count:
   // the per-note delay step is derived per round (see cascadeStep) and
   // handed to .cascade via --cascade-step.
@@ -361,7 +368,7 @@
     timerEl.textContent = formatTime(timeLeft);
     timerEl.classList.remove("timer-low");
     showScreen(exerciseScreen);
-    drawTab(null);
+    if (!MOBILE_QUERY.matches) drawTab(null);
     timerId = setInterval(tick, 1000);
     nextRound();
   }
@@ -418,7 +425,7 @@
     roundDirectionEl.classList.toggle("hidden", round.direction == null);
     roundDirectionEl.textContent = round.direction == null ? "" : round.direction;
     drawNeck(viewStart(round)); // UNFILLED (and unlabelled) until reveal
-    drawTab(round); // staff visible, numbers hidden until reveal
+    if (!MOBILE_QUERY.matches) drawTab(round); // staff visible, numbers hidden until reveal
     neckSvg.classList.add("revealable");
     tabSvg.classList.add("revealable");
     if (revealHintDone) hideTabBubble();
@@ -457,7 +464,7 @@
     tabSvg.classList.remove("revealable");
     drawNotes(currentRound);
     revealFretLabels();
-    revealTabNumbers();
+    if (!MOBILE_QUERY.matches) revealTabNumbers();
     var wait = REDUCED_MOTION.matches ? 0 : CASCADE_TOTAL_MS;
     setTimeout(function () {
       if (phase !== "revealing") return; // home click may have interrupted
