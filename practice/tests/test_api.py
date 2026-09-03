@@ -136,7 +136,7 @@ class IndexPageTests(TestCase):
         section_end = html.index('id="start-wrap"', chord_inv_at)
         section = html[chord_inv_at:section_end]
         self.assertIn(">Core Diatonic</span>", section)
-        self.assertNotIn("Major 7 — Root Position", html)
+        self.assertNotIn("Major 7 Chord", html)
         idx = section.index('value="')
         value = section[idx + 7:section.index('"', idx + 7)]
         ids = value.split(",")
@@ -293,21 +293,8 @@ class RoundApiTests(ValidRoundMixin, TestCase):
             "Minor 7 Arpeggio", "Minor 7b5 Arpeggio",
             "Diminished 7 Arpeggio",
             "Major Pentatonic", "Minor Pentatonic",
-            "Major 7 — Root Position",
-            "Major 7 — 1st Inversion", "Major 7 — 2nd Inversion",
-            "Major 7 — 3rd Inversion",
-            "Minor 7 — Root Position",
-            "Minor 7 — 1st Inversion", "Minor 7 — 2nd Inversion",
-            "Minor 7 — 3rd Inversion",
-            "Dominant 7 — Root Position",
-            "Dominant 7 — 1st Inversion", "Dominant 7 — 2nd Inversion",
-            "Dominant 7 — 3rd Inversion",
-            "Minor 7b5 — Root Position",
-            "Minor 7b5 — 1st Inversion", "Minor 7b5 — 2nd Inversion",
-            "Minor 7b5 — 3rd Inversion",
-            "Diminished 7 — Root Position",
-            "Diminished 7 — 1st Inversion", "Diminished 7 — 2nd Inversion",
-            "Diminished 7 — 3rd Inversion",
+            "Major 7 Chord", "Minor 7 Chord", "Dominant 7 Chord",
+            "Minor 7b5 Chord", "Diminished 7 Chord",
         })
 
     def test_round_rejects_post(self):

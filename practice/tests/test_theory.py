@@ -65,9 +65,8 @@ _INVERSION_SUFFIXES = {0: "0th", 1: "1st", 2: "2nd", 3: "3rd"}
 EXPECTED_CHORD_SCALES = {}
 for _prefix, (_name, _intervals) in _CHORD_TYPES.items():
     for _n, _ord in _INVERSION_SUFFIXES.items():
-        _label = "Root Position" if _n == 0 else f"{_ord} Inversion"
         EXPECTED_CHORD_SCALES[f"{_prefix}_{_ord}_inv"] = (
-            f"{_name} — {_label}", _intervals, "chord", _n,
+            f"{_name} Chord", _intervals, "chord", _n,
         )
 
 

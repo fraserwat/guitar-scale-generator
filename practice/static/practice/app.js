@@ -159,18 +159,21 @@
     return geo.top + (stringNum - 1) * geo.stringGap;
   }
 
-  /** First fret shown on the neck. The window is 6 frets wide; a 4-fret
-   *  shape sits centred in it (one empty fret each side) instead of
-   *  hugging the left edge. Wider shapes anchor on their lowest fret as
-   *  served. (A shape at fret 1 can't shift down — there's no fret 0.) */
+  var WINDOW_SIZE = 6; // frets shown at once — must match theory.WINDOW_SIZE
+
+  /** First fret shown on the neck. The window is WINDOW_SIZE frets wide;
+   *  a shape narrower than that sits centred in it (leftover empty frets
+   *  split evenly each side) instead of hugging the left edge. A
+   *  full-width shape anchors on its lowest fret as served — no room left
+   *  to centre. (A shape at fret 1 can't shift left past it — there's no
+   *  fret 0.) */
   function viewStart(round) {
     var top = Math.max.apply(null, round.notes.map(function (n) {
       return n.fret;
     }));
     var span = top - round.window_start + 1;
-    return (span === 4 && round.window_start > 1)
-      ? round.window_start - 1
-      : round.window_start;
+    var pad = Math.floor((WINDOW_SIZE - span) / 2);
+    return Math.max(1, round.window_start - pad);
   }
 
   /** Per-note stagger so the whole cascade always spans
