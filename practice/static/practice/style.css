@@ -878,7 +878,11 @@ kbd {
      axes constrained at once, no flex-grow pre-resolving either one —
      so the box genuinely shrinks to the diagram's aspect ratio instead
      of just letterboxing smaller content inside an oversized one.
-     margin: auto centres it in the grid cell on both axes,  and
+     justify-self/align-self (not margin: auto) centre it in the grid
+     cell on both axes — margin is reserved for .flow's
+     margin-block-start (see line 146); a margin shorthand here would
+     silently win the cascade tie against it (media query is last in
+     file) and collapse the gap above the fretboard down to zero.
      aspect-ratio (app.js, matching the viewBox) is belt-and-suspenders
      since viewBox-derived intrinsic ratio isn't formally specified. */
   .neck {
@@ -888,7 +892,8 @@ kbd {
     height: auto;
     max-width: 100%;
     max-height: 100%;
-    margin: auto;
+    justify-self: center;
+    align-self: center;
   }
 }
 

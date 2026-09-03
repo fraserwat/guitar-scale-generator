@@ -60,97 +60,97 @@ natural_minor_scale:
 
 # Chord Inv. — Core Diatonic (major7 / minor7 / dominant7 / minor7b5).
 major7_chord_0th_inv:
-  name: "Major 7 — Root Position"
+  name: "Major 7 Chord"
   intervals: [0, 4, 7, 11]
   category: chord
   inversion: 0
   menu_group: core_diatonic
 major7_chord_1st_inv:
-  name: "Major 7 — 1st Inversion"
+  name: "Major 7 Chord"
   intervals: [0, 4, 7, 11]
   category: chord
   inversion: 1
   menu_group: core_diatonic
 major7_chord_2nd_inv:
-  name: "Major 7 — 2nd Inversion"
+  name: "Major 7 Chord"
   intervals: [0, 4, 7, 11]
   category: chord
   inversion: 2
   menu_group: core_diatonic
 major7_chord_3rd_inv:
-  name: "Major 7 — 3rd Inversion"
+  name: "Major 7 Chord"
   intervals: [0, 4, 7, 11]
   category: chord
   inversion: 3
   menu_group: core_diatonic
 minor7_chord_0th_inv:
-  name: "Minor 7 — Root Position"
+  name: "Minor 7 Chord"
   intervals: [0, 3, 7, 10]
   category: chord
   inversion: 0
   menu_group: core_diatonic
 minor7_chord_1st_inv:
-  name: "Minor 7 — 1st Inversion"
+  name: "Minor 7 Chord"
   intervals: [0, 3, 7, 10]
   category: chord
   inversion: 1
   menu_group: core_diatonic
 minor7_chord_2nd_inv:
-  name: "Minor 7 — 2nd Inversion"
+  name: "Minor 7 Chord"
   intervals: [0, 3, 7, 10]
   category: chord
   inversion: 2
   menu_group: core_diatonic
 minor7_chord_3rd_inv:
-  name: "Minor 7 — 3rd Inversion"
+  name: "Minor 7 Chord"
   intervals: [0, 3, 7, 10]
   category: chord
   inversion: 3
   menu_group: core_diatonic
 dominant7_chord_0th_inv:
-  name: "Dominant 7 — Root Position"
+  name: "Dominant 7 Chord"
   intervals: [0, 4, 7, 10]
   category: chord
   inversion: 0
   menu_group: core_diatonic
 dominant7_chord_1st_inv:
-  name: "Dominant 7 — 1st Inversion"
+  name: "Dominant 7 Chord"
   intervals: [0, 4, 7, 10]
   category: chord
   inversion: 1
   menu_group: core_diatonic
 dominant7_chord_2nd_inv:
-  name: "Dominant 7 — 2nd Inversion"
+  name: "Dominant 7 Chord"
   intervals: [0, 4, 7, 10]
   category: chord
   inversion: 2
   menu_group: core_diatonic
 dominant7_chord_3rd_inv:
-  name: "Dominant 7 — 3rd Inversion"
+  name: "Dominant 7 Chord"
   intervals: [0, 4, 7, 10]
   category: chord
   inversion: 3
   menu_group: core_diatonic
 minor7b5_chord_0th_inv:
-  name: "Minor 7b5 — Root Position"
+  name: "Minor 7b5 Chord"
   intervals: [0, 3, 6, 10]
   category: chord
   inversion: 0
   menu_group: core_diatonic
 minor7b5_chord_1st_inv:
-  name: "Minor 7b5 — 1st Inversion"
+  name: "Minor 7b5 Chord"
   intervals: [0, 3, 6, 10]
   category: chord
   inversion: 1
   menu_group: core_diatonic
 minor7b5_chord_2nd_inv:
-  name: "Minor 7b5 — 2nd Inversion"
+  name: "Minor 7b5 Chord"
   intervals: [0, 3, 6, 10]
   category: chord
   inversion: 2
   menu_group: core_diatonic
 minor7b5_chord_3rd_inv:
-  name: "Minor 7b5 — 3rd Inversion"
+  name: "Minor 7b5 Chord"
   intervals: [0, 3, 6, 10]
   category: chord
   inversion: 3
@@ -158,25 +158,25 @@ minor7b5_chord_3rd_inv:
 
 # Chord Inv. — Altered (diminished7 today; augmented etc. can join later).
 diminished7_chord_0th_inv:
-  name: "Diminished 7 — Root Position"
+  name: "Diminished 7 Chord"
   intervals: [0, 3, 6, 9]
   category: chord
   inversion: 0
   menu_group: altered
 diminished7_chord_1st_inv:
-  name: "Diminished 7 — 1st Inversion"
+  name: "Diminished 7 Chord"
   intervals: [0, 3, 6, 9]
   category: chord
   inversion: 1
   menu_group: altered
 diminished7_chord_2nd_inv:
-  name: "Diminished 7 — 2nd Inversion"
+  name: "Diminished 7 Chord"
   intervals: [0, 3, 6, 9]
   category: chord
   inversion: 2
   menu_group: altered
 diminished7_chord_3rd_inv:
-  name: "Diminished 7 — 3rd Inversion"
+  name: "Diminished 7 Chord"
   intervals: [0, 3, 6, 9]
   category: chord
   inversion: 3
