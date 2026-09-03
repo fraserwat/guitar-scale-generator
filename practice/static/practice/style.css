@@ -66,6 +66,18 @@
 
 * { box-sizing: border-box; }
 
+/* Mobile Safari/Chrome silently re-inflate font-size on narrow text
+   blocks whose content changes after load (WebKit/Blink's "text
+   autosizer" heuristic — meant for long-form articles, not app UI).
+   round-scale/round-key/timer are all textContent-swapped every round
+   inside narrow flex items, the exact shape that triggers it: on a
+   phone that showed up as the round header suddenly rendering at ~2x
+   size and overlapping the timer, varying round to round with no CSS
+   change involved. Disabling the heuristic outright is the standard
+   fix — without it, every dynamically-updated label in this app is a
+   size-inflation trigger waiting to fire on some device/round combo. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 body {
   margin: 0;
   min-height: 100svh;
