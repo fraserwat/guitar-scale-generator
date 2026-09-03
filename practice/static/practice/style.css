@@ -885,27 +885,33 @@ kbd {
        than the viewport. */
     overflow: hidden;
   }
-  /* width/height: auto + max-width/max-height: 100% is the same
-     mechanism that makes width:100%;height:auto work on desktop — both
-     axes constrained at once, no flex-grow pre-resolving either one —
-     so the box genuinely shrinks to the diagram's aspect ratio instead
-     of just letterboxing smaller content inside an oversized one.
-     justify-self/align-self (not margin: auto) centre it in the grid
-     cell on both axes — margin is reserved for .flow's
-     margin-block-start (see line 146); a margin shorthand here would
-     silently win the cascade tie against it (media query is last in
-     file) and collapse the gap above the fretboard down to zero.
-     aspect-ratio (app.js, matching the viewBox) is belt-and-suspenders
-     since viewBox-derived intrinsic ratio isn't formally specified. */
+  /* neck-wrap: plain div sized by the grid track (unlike #neck below,
+     no replaced-element/aspect-ratio edge cases). overflow: hidden
+     hard-clips #neck to this box no matter what it computes, so it can
+     never paint over the header row or tab-wrap/judge-buttons. */
+  .neck-wrap {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  /* Safari applies max-height before resolving aspect-ratio on a grid
+     child, so max-height: 100% silently stops constraining anything —
+     #neck can render at full intrinsic size and overflow neck-wrap
+     (seen live: fretboard painting over the round header above it).
+     position: absolute + inset: 0 + margin: auto is order-independent,
+     so it isn't subject to that bug; neck-wrap's overflow: hidden is
+     the backstop for whatever this doesn't catch. */
   .neck {
+    position: absolute;
+    inset: 0;
+    margin: auto;
     min-width: 0;
     min-height: 0;
     width: auto;
     height: auto;
     max-width: 100%;
     max-height: 100%;
-    justify-self: center;
-    align-self: center;
   }
 }
 
