@@ -3,7 +3,6 @@
   "use strict";
 
   var SVG_NS = "http://www.w3.org/2000/svg";
-  var CSRF_TOKEN = document.body.dataset.csrfToken;
 
   // ---- Elements -----------------------------------------------------------
   var appTitleEl = document.querySelector(".app-title");
@@ -473,7 +472,6 @@
   function judge(correct) {
     if (phase !== "reveal" || !currentRound) return;
     var round = currentRound;
-    var wasRetry = isRetry; // nextRound() resets the flag before the POST fires
     rounds.push({
       form_id: round.form_id,
       display_label: round.display_label,
@@ -487,23 +485,6 @@
     // unrelated rounds (and again after that if the retry also misses). The
     // FULL round object is stored so the re-ask renders without a fetch.
     if (!correct) retryQueue.push({ round: round, delay: RETRY_GAP_ROUNDS });
-
-    // Best-effort attempt log — a failed POST never blocks the game.
-    fetch("/api/log/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": CSRF_TOKEN
-      },
-      body: JSON.stringify({
-        form_id: round.form_id,
-        scale: round.scale,
-        key: round.key,
-        direction: round.direction,
-        correct: correct,
-        is_retry: wasRetry
-      })
-    }).catch(function () { /* see comment above */ });
 
     nextRound();
   }

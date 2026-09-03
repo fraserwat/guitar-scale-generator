@@ -543,7 +543,7 @@ class BrokenConfigTests(SimpleTestCase):
             theory.load_fingerings(tmp)  # expected to raise
 
     def test_overlong_id_rejected(self):
-        """Every loadable id must fit the AttemptLog.form_id column."""
+        """Every loadable id must fit within FORM_ID_MAX_LENGTH."""
         bad = {**VALID_FORM, "id": "x" * (theory.FORM_ID_MAX_LENGTH + 1)}
         with self.assertRaises(theory.ConfigError) as ctx:
             self.load_broken(bad)

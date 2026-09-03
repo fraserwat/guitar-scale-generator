@@ -1,27 +1,17 @@
 """Tests for the page and API endpoints."""
 
-import json
 from unittest import mock
 
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
 import random
 
 from practice import theory
-from practice.models import AttemptLog
 
 ROUND_KEYS = {"scale", "key", "direction", "form_id",
               "category", "display_label", "caged_shape", "starting_finger",
               "window_start", "notes"}
 NOTE_KEYS = {"string", "fret", "pitch_class", "note_name", "is_root"}
-
-VALID_LOG_PAYLOAD = {
-    "form_id": "major-scale-e-root-1st-finger-form",
-    "scale": "Major Scale",
-    "key": "A",
-    "direction": "Ascending",
-    "correct": True,
-}
 
 
 class IndexPageTests(TestCase):
@@ -34,7 +24,6 @@ class IndexPageTests(TestCase):
         self.assertIn('id="start-btn"', html)
         # 7-string is still promised (hover hint on the disabled segment).
         self.assertIn('title="Coming soon"', html)
-        self.assertIn("data-csrf-token", html)
         # The title h1 is the click-to-menu hook wrapping the SVG wordmark.
         self.assertIn("<title>ScaleRunner</title>", html)
         self.assertIn('<h1 class="app-title" title="Back to menu">', html)
@@ -331,7 +320,7 @@ class RoundApiTests(ValidRoundMixin, TestCase):
 # fresh here rather than imported to keep the two test modules independent).
 # No chord fingerings ship yet (pilot content pending), so these tests
 # patch theory.load_fingerings() to exercise the category=="chord" branch
-# of api_round/api_log ahead of real content landing.
+# of api_round ahead of real content landing.
 _CHORD_FORM_RAW = {
     "id": "test-chord-form",
     "scale": "major7_chord_1st_inv",
@@ -361,7 +350,7 @@ def _chord_fingerings(*args, **kwargs):
 
 
 class ChordRoundApiTests(TestCase):
-    """Chord Inv. rounds carry no direction — see api_round/api_log."""
+    """Chord Inv. rounds carry no direction — see api_round."""
 
     def test_chord_round_has_null_direction(self):
         with mock.patch("practice.theory.load_fingerings",
@@ -373,50 +362,6 @@ class ChordRoundApiTests(TestCase):
         self.assertEqual(data["category"], "chord")
         self.assertIsNone(data["direction"])
         self.assertEqual(data["display_label"], "E Root (1st Inversion)")
-
-    def test_chord_log_accepts_null_direction(self):
-        with mock.patch("practice.theory.load_fingerings",
-                         side_effect=_chord_fingerings):
-            resp = self.client.post(
-                "/api/log/",
-                data=json.dumps({
-                    "form_id": "test-chord-form",
-                    "scale": "Major 7 — 1st Inversion",
-                    "key": "A",
-                    "direction": None,
-                    "correct": True,
-                }),
-                content_type="application/json",
-            )
-        self.assertEqual(resp.status_code, 201)
-        log = AttemptLog.objects.get(id=resp.json()["id"])
-        self.assertIsNone(log.direction)
-
-    def test_chord_log_rejects_non_null_direction(self):
-        with mock.patch("practice.theory.load_fingerings",
-                         side_effect=_chord_fingerings):
-            resp = self.client.post(
-                "/api/log/",
-                data=json.dumps({
-                    "form_id": "test-chord-form",
-                    "scale": "Major 7 — 1st Inversion",
-                    "key": "A",
-                    "direction": "Ascending",
-                    "correct": True,
-                }),
-                content_type="application/json",
-            )
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn("direction", resp.json()["errors"])
-
-    def test_non_chord_log_still_requires_direction(self):
-        resp = self.client.post(
-            "/api/log/",
-            data=json.dumps({**VALID_LOG_PAYLOAD, "direction": None}),
-            content_type="application/json",
-        )
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn("direction", resp.json()["errors"])
 
 
 class RoundKeySpellingTests(TestCase):
@@ -642,192 +587,3 @@ class RoundFilterTests(ValidRoundMixin, TestCase):
         resp = self.client.post("/api/round/?scales=major_scale")
         self.assertEqual(resp.status_code, 405)
 
-
-# Throttling is covered by test_ratelimit.py; disabled here so these
-# validation tests can POST freely (32 forms plus the invalid-payload
-# cases exceed the default per-minute cap inside one test-run window).
-@override_settings(API_RATE_LIMIT_PER_MINUTE=0)
-class LogApiTests(TestCase):
-    def post_log(self, payload, raw=None):
-        body = raw if raw is not None else json.dumps(payload)
-        return self.client.post("/api/log/", body,
-                                content_type="application/json")
-
-    def test_valid_log_correct_true(self):
-        resp = self.post_log(VALID_LOG_PAYLOAD)
-        self.assertEqual(resp.status_code, 201)
-        self.assertEqual(resp.json()["status"], "ok")
-        self.assertEqual(AttemptLog.objects.count(), 1)
-        row = AttemptLog.objects.get()
-        self.assertEqual(row.form_id, "major-scale-e-root-1st-finger-form")
-        self.assertEqual(row.scale, "Major Scale")
-        self.assertEqual(row.key, "A")
-        self.assertEqual(row.direction, "Ascending")
-        self.assertTrue(row.correct)
-        self.assertFalse(row.is_retry)
-        self.assertIsNotNone(row.timestamp)
-
-    def test_valid_log_correct_false(self):
-        payload = {**VALID_LOG_PAYLOAD,
-                   "form_id": "dominant7-arpeggio-e-root-1st-finger-form",
-                   "scale": "Dominant 7 Arpeggio",
-                   "key": "F#",
-                   "direction": "Descending",
-                   "correct": False}
-        resp = self.post_log(payload)
-        self.assertEqual(resp.status_code, 201)
-        row = AttemptLog.objects.get()
-        self.assertEqual(row.form_id, "dominant7-arpeggio-e-root-1st-finger-form")
-        self.assertEqual(row.scale, "Dominant 7 Arpeggio")
-        self.assertEqual(row.key, "F#")
-        self.assertEqual(row.direction, "Descending")
-        self.assertFalse(row.correct)
-
-    def test_log_without_is_retry_defaults_false(self):
-        """is_retry is optional — payloads without it must keep logging fine
-        and land as first attempts (False)."""
-        resp = self.post_log(VALID_LOG_PAYLOAD)
-        self.assertEqual(resp.status_code, 201)
-        self.assertFalse(AttemptLog.objects.get().is_retry)
-
-    def test_log_is_retry_true(self):
-        resp = self.post_log({**VALID_LOG_PAYLOAD, "is_retry": True})
-        self.assertEqual(resp.status_code, 201)
-        self.assertTrue(AttemptLog.objects.get().is_retry)
-
-    def test_log_is_retry_true_correct_false(self):
-        """A failed retry — re-queued client-side, logged like any attempt."""
-        payload = {**VALID_LOG_PAYLOAD, "correct": False, "is_retry": True}
-        resp = self.post_log(payload)
-        self.assertEqual(resp.status_code, 201)
-        row = AttemptLog.objects.get()
-        self.assertFalse(row.correct)
-        self.assertTrue(row.is_retry)
-
-    def test_log_is_retry_false_explicit(self):
-        resp = self.post_log({**VALID_LOG_PAYLOAD, "is_retry": False})
-        self.assertEqual(resp.status_code, 201)
-        self.assertFalse(AttemptLog.objects.get().is_retry)
-
-    def test_log_is_retry_wrong_types_400(self):
-        bad_values = {
-            "is_retry as string": "true",
-            "is_retry as int 1": 1,
-            "is_retry as int 0": 0,
-            "is_retry as null": None,
-            "is_retry as list": [],
-            "is_retry as object": {},
-        }
-        for label, value in bad_values.items():
-            with self.subTest(case=label):
-                resp = self.post_log({**VALID_LOG_PAYLOAD, "is_retry": value})
-                self.assertEqual(resp.status_code, 400)
-                self.assertIn("is_retry", resp.json()["errors"])
-        self.assertEqual(AttemptLog.objects.count(), 0)
-
-    def test_is_retry_field_defaults_false(self):
-        """Model default backfills old rows and covers ORM creates that
-        omit the kwarg (nothing before v4 passed it)."""
-        self.assertIs(AttemptLog._meta.get_field("is_retry").default, False)
-        row = AttemptLog.objects.create(
-            form_id="major-scale-e-root-1st-finger-form",
-            scale="Major Scale", key="A", direction="Ascending", correct=True,
-        )
-        row.refresh_from_db()
-        self.assertFalse(row.is_retry)
-
-    def test_every_loaded_form_id_accepted(self):
-        """form_id is validated against the loaded fingering configs, so
-        every shipped form — whatever /api/round/ can serve — logs fine.
-        Chord-category forms carry no direction (see ChordRoundApiTests)."""
-        fingerings = theory.load_fingerings()
-        for form_id, form in fingerings.items():
-            with self.subTest(form_id=form_id):
-                direction = None if form["category"] == "chord" else "Ascending"
-                resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": form_id,
-                                      "direction": direction})
-                self.assertEqual(resp.status_code, 201)
-        self.assertEqual(AttemptLog.objects.count(), len(fingerings))
-
-    def test_every_flat_key_accepted(self):
-        """The client echoes the served key back, so flat spellings
-        (Db, Eb, Gb, Ab, Bb) must log fine."""
-        for flat in theory.FLAT_KEYS:
-            with self.subTest(key=flat):
-                resp = self.post_log({**VALID_LOG_PAYLOAD, "key": flat})
-                self.assertEqual(resp.status_code, 201)
-        self.assertEqual(AttemptLog.objects.count(), len(theory.FLAT_KEYS))
-        self.assertEqual(
-            sorted(AttemptLog.objects.values_list("key", flat=True)),
-            sorted(theory.FLAT_KEYS),
-        )
-
-    def test_every_sharp_and_natural_key_accepted(self):
-        for key in theory.KEYS:
-            with self.subTest(key=key):
-                resp = self.post_log({**VALID_LOG_PAYLOAD, "key": key})
-                self.assertEqual(resp.status_code, 201)
-        self.assertEqual(AttemptLog.objects.count(), len(theory.KEYS))
-
-    def test_invalid_json_body_400(self):
-        resp = self.post_log(None, raw="{not json")
-        self.assertEqual(resp.status_code, 400)
-        self.assertEqual(AttemptLog.objects.count(), 0)
-
-    def test_non_object_json_400(self):
-        resp = self.post_log(None, raw="[1, 2, 3]")
-        self.assertEqual(resp.status_code, 400)
-        self.assertEqual(AttemptLog.objects.count(), 0)
-
-    def test_missing_each_field_400(self):
-        for field in VALID_LOG_PAYLOAD:
-            payload = dict(VALID_LOG_PAYLOAD)
-            del payload[field]
-            with self.subTest(missing=field):
-                resp = self.post_log(payload)
-                self.assertEqual(resp.status_code, 400)
-                self.assertIn(field, resp.json()["errors"])
-        self.assertEqual(AttemptLog.objects.count(), 0)
-
-    def test_wrong_types_400(self):
-        bad_payloads = {
-            "correct as string": {**VALID_LOG_PAYLOAD, "correct": "true"},
-            "correct as int": {**VALID_LOG_PAYLOAD, "correct": 1},
-            "scale as int": {**VALID_LOG_PAYLOAD, "scale": 5},
-            "unknown scale": {**VALID_LOG_PAYLOAD, "scale": "Phrygian"},
-            "unknown key": {**VALID_LOG_PAYLOAD, "key": "H"},
-            "non-key spelling Cb": {**VALID_LOG_PAYLOAD, "key": "Cb"},
-            "non-key spelling E#": {**VALID_LOG_PAYLOAD, "key": "E#"},
-            "double-flat key": {**VALID_LOG_PAYLOAD, "key": "Bbb"},
-            "unknown direction": {**VALID_LOG_PAYLOAD, "direction": "Sideways"},
-            "empty form_id": {**VALID_LOG_PAYLOAD, "form_id": ""},
-            "form_id as int": {**VALID_LOG_PAYLOAD, "form_id": 7},
-            "unknown form_id": {**VALID_LOG_PAYLOAD, "form_id": "no-such-form"},
-        }
-        for label, payload in bad_payloads.items():
-            with self.subTest(case=label):
-                resp = self.post_log(payload)
-                self.assertEqual(resp.status_code, 400)
-        self.assertEqual(AttemptLog.objects.count(), 0)
-
-    def test_form_id_bound_mirrors_model_column(self):
-        """theory.FORM_ID_MAX_LENGTH (Django-free module) must match the
-        AttemptLog column it exists to protect."""
-        self.assertEqual(
-            AttemptLog._meta.get_field("form_id").max_length,
-            theory.FORM_ID_MAX_LENGTH,
-        )
-
-    def test_unknown_form_id_400_with_field_error(self):
-        """form_id must name a loaded fingering form → per-field 400.
-        This also bounds the stored value: every loadable id fits the
-        model's max_length=64 column."""
-        resp = self.post_log({**VALID_LOG_PAYLOAD, "form_id": "x" * 65})
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn("form_id", resp.json()["errors"])
-        self.assertEqual(AttemptLog.objects.count(), 0)
-
-    def test_log_rejects_get(self):
-        resp = self.client.get("/api/log/")
-        self.assertEqual(resp.status_code, 405)
-        self.assertEqual(AttemptLog.objects.count(), 0)
