@@ -453,6 +453,35 @@ body {
   /* Rotated fret labels sit in the view's WIDTH margin (see app.js
      NECK_MOBILE) — smaller text so more of that width goes to the grid. */
   .neck .fret-label { font-size: 11px; }
+
+  /* Game screen: let the fretboard fill the viewport instead of being
+     sized by width alone (the previous width:100%;height:auto rule left
+     it undersized on both axes, with dead space beside and below it).
+     .app's desktop centring grid (flexible spacer rows) only centres
+     fixed-size content — it doesn't grow it, so it's swapped out here
+     for a plain fill column. The SVG's own default
+     preserveAspectRatio="xMidYMid meet" then contain-fits the diagram
+     into whatever box .neck ends up with — no JS/ResizeObserver needed. */
+  .app:has(#exercise-screen:not(.hidden)) {
+    height: 100dvh;
+    grid-template-rows: auto 1fr;
+  }
+  #exercise-screen {
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  #exercise-screen > .exercise-top,
+  #exercise-screen > .tab-wrap,
+  #exercise-screen > .judge-buttons {
+    flex-shrink: 0;
+  }
+  .neck {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
