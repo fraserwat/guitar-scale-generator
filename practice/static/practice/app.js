@@ -27,6 +27,7 @@
   var tabBubbleEl = document.getElementById("tab-bubble");
   var correctBtn = document.getElementById("correct-btn");
   var incorrectBtn = document.getElementById("incorrect-btn");
+  var judgeButtonsEl = document.querySelector(".judge-buttons");
   var resultsSummaryEl = document.getElementById("results-summary");
   var resultsScoreEl = document.getElementById("results-score");
   var resultsPctEl = document.getElementById("results-pct");
@@ -500,6 +501,39 @@
     }
   }
 
+  /** Mobile only. The fretboard fills as much vertical space as its own
+   *  aspect ratio allows (style.css), so the leftover between its bottom
+   *  edge and the screen's bottom edge varies round to round (the header
+   *  can wrap to one or two lines). CSS alone can't centre one sibling
+   *  in "whatever's left after another independently-sized sibling" —
+   *  that needs the other sibling's actual rendered size, which only
+   *  exists post-layout — so this measures it directly and nudges
+   *  .judge-buttons to split the remainder evenly above and below it,
+   *  same "redraw fresh each round" scope as drawNeck().
+   *
+   *  .judge-buttons is the LAST row of #exercise-screen's grid, so its
+   *  own bottom edge is always flush with the (overflow:hidden-clipped)
+   *  container bottom — bottomGap is structurally ~0. All the slack
+   *  shows up as topGap instead, so centring means moving the buttons
+   *  UP by half of it. transform, not margin-top: a grid item's default
+   *  align-items:stretch makes negative margin grow the stretched box
+   *  instead of shifting its position (confirmed via getBoundingClientRect
+   *  — margin-top changed, rendered position didn't move at all).
+   *  transform is a pure visual offset, uninvolved in grid sizing. */
+  function centerJudgeButtons() {
+    judgeButtonsEl.style.transform = ""; // drop any prior nudge before re-measuring
+    if (!MOBILE_QUERY.matches) return;
+    var screenBottom = exerciseScreen.getBoundingClientRect().bottom;
+    var neckBottom = neckSvg.getBoundingClientRect().bottom;
+    var judgeRect = judgeButtonsEl.getBoundingClientRect();
+    var topGap = judgeRect.top - neckBottom;
+    var bottomGap = screenBottom - judgeRect.bottom;
+    var slack = topGap - bottomGap;
+    if (slack > 0) {
+      judgeButtonsEl.style.transform = "translateY(" + (-slack / 2) + "px)";
+    }
+  }
+
   function presentRound(round) {
     currentRound = round;
     roundNum += 1;
@@ -522,6 +556,7 @@
     // Mobile has no TAB to float the coaching hint over — skip it there.
     if (revealHintDone || MOBILE_QUERY.matches) hideTabBubble();
     else showTabBubble(REVEAL_HINT);
+    centerJudgeButtons(); // after the header text/neck above, so it measures this round's real layout
     phase = "play";
   }
 
