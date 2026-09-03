@@ -9,7 +9,7 @@
         as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{% static 'practice/fonts/archivo-var-latin.woff2' %}"
         as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=39">
+  <link rel="stylesheet" href="{% static 'practice/style.css' %}?v=42">
 </head>
 <body data-csrf-token="{{ csrf_token }}">
   <main class="app">
@@ -201,7 +201,10 @@
       <!-- TAB of the round's run: staff drawn immediately, numbers hidden
            until the answer reveal (they'd give the position away).
            The wrapper anchors the round-1 coaching bubble over the
-           (empty) staff; app.js hides it after the first reveal. -->
+           (empty) staff; app.js hides it after the first reveal. On
+           mobile (no TAB) the coaching hint is simply never shown —
+           #tab-bubble is still used there for the round-fetch error
+           notice, just without the coaching-hint positioning concern. -->
       <div class="tab-wrap">
         <svg id="tab" class="tab" viewBox="0 0 560 130" role="img"
              aria-label="Tablature"></svg>
@@ -263,6 +266,6 @@
     </section>
   </main>
 
-  <script src="{% static 'practice/app.js' %}?v=19"></script>
+  <script src="{% static 'practice/app.js' %}?v=22"></script>
 </body>
 </html>
