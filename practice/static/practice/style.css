@@ -434,6 +434,12 @@ body {
   .exercise-groups { grid-template-columns: 1fr; }
 }
 
+/* Mobile layout breakpoint. Single source of truth — later mobile rules
+   (menu picker, TAB, fretboard orientation) key off this same value. */
+@media (max-width: 640px) {
+  .hint { display: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .seg-option, .seg-thumb, .exercise-box, .exercise-name,
   .group-toggle { transition: none; }
