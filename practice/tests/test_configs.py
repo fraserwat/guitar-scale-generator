@@ -95,7 +95,7 @@ VALID_CHORD_FORM = {
 # 0th inversion x3 anchors, major7/minor7/dominant7/minor7b5/diminished7
 # 1st/2nd/3rd inversion on D-root, plus all four inversions of
 # major7/minor7/dominant7/minor7b5/diminished7 on E-root.
-EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 20, "pentatonic": 10, "chord": 38}
+EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 25, "pentatonic": 10, "chord": 38}
 EXPECTED_FORM_IDS = {
     "major7-chord-e-root-0th-inv",
     "major7-chord-e-root-1st-inv",
@@ -172,6 +172,11 @@ EXPECTED_FORM_IDS = {
     "minor7-arpeggio-a-root-1st-finger-form",
     "minor7b5-arpeggio-a-root-1st-finger-form",
     "diminished7-arpeggio-a-root-1st-finger-form",
+    "major7-arpeggio-a-root-2nd-finger-form",
+    "dominant7-arpeggio-a-root-2nd-finger-form",
+    "minor7-arpeggio-a-root-2nd-finger-form",
+    "minor7b5-arpeggio-a-root-2nd-finger-form",
+    "diminished7-arpeggio-a-root-2nd-finger-form",
     "major7-arpeggio-e-root-4th-finger-form",
     "dominant7-arpeggio-e-root-4th-finger-form",
     "minor7-arpeggio-e-root-4th-finger-form",
@@ -195,14 +200,14 @@ def load_temp(*forms):
 
 
 class ShippedConfigTests(SimpleTestCase):
-    def test_80_configs_load_and_validate(self):
+    def test_85_configs_load_and_validate(self):
         fingerings = theory.load_fingerings()
-        self.assertEqual(len(fingerings), 80)
+        self.assertEqual(len(fingerings), 85)
 
     def test_count_by_category(self):
         """3 E-root + 3 A-root finger forms for each of the major and
         natural minor scales + 5 seventh-chord arpeggios in 1st, 2nd and
-        4th E-root finger forms plus 1st A-root finger forms + 2
+        4th E-root finger forms plus 1st and 2nd A-root finger forms + 2
         pentatonic scales x 5 CAGED boxes."""
         counts = {}
         for form in theory.load_fingerings().values():
@@ -221,7 +226,7 @@ class ShippedConfigTests(SimpleTestCase):
         """CAGED shapes / starting fingers are valid and never repeat
         within one (scale, anchor) group; the shipped major-scale forms
         are fingers 1, 2, 4 per root string and each seventh-chord
-        arpeggio ships fingers 1, 2, 4 (E-root) plus finger 1 (A-root).
+        arpeggio ships fingers 1, 2, 4 (E-root) plus fingers 1, 2 (A-root).
         display_label stays unique within each scale — it's the only
         label the player sees."""
         by_scale = {}
@@ -243,7 +248,7 @@ class ShippedConfigTests(SimpleTestCase):
             elif category == "arpeggio":
                 self.assertIn(anchor, ("root_low_e", "root_low_a"), scale_id)
                 expected_fingers = (
-                    [1] if anchor == "root_low_a" else [1, 2, 4])
+                    [1, 2] if anchor == "root_low_a" else [1, 2, 4])
                 self.assertEqual(
                     sorted(f["starting_finger"] for f in forms),
                     expected_fingers, scale_id)
