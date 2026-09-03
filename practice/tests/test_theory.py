@@ -447,7 +447,7 @@ class ResolveFormExhaustiveTests(SimpleTestCase):
     def test_every_form_every_key(self):
         fingerings = theory.load_fingerings()
         scales = theory.load_scales()
-        self.assertEqual(len(fingerings), 85)
+        self.assertEqual(len(fingerings), 88)
         for form_id, form in fingerings.items():
             intervals = set(scales[form["scale"]]["intervals"])
             all_offsets = [o for offs in form["offsets"].values() for o in offs]

@@ -91,17 +91,20 @@ VALID_CHORD_FORM = {
 # major and natural minor scales, the five seventh-chord arpeggios in 1st,
 # 2nd and 4th finger E-root forms plus a 1st finger A-root form (hand-authored
 # TABs derived from the same-finger major-scale forms), the five CAGED boxes
-# of each pentatonic scale, and the shipped Chord Inv. forms: major7
-# 0th inversion x3 anchors, major7/minor7/dominant7/minor7b5/diminished7
-# 1st/2nd/3rd inversion on D-root, plus all four inversions of
-# major7/minor7/dominant7/minor7b5/diminished7 on E-root.
-EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 25, "pentatonic": 10, "chord": 38}
+# of each pentatonic scale, and the shipped Chord Inv. forms:
+# major7/minor7/dominant7/minor7b5/diminished7 1st/2nd/3rd inversion on
+# D-root, all four inversions of major7/minor7/dominant7/minor7b5/diminished7
+# on E-root, plus all four inversions of major7 on A-root.
+EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 25, "pentatonic": 10, "chord": 41}
 EXPECTED_FORM_IDS = {
     "major7-chord-e-root-0th-inv",
     "major7-chord-e-root-1st-inv",
     "major7-chord-e-root-2nd-inv",
     "major7-chord-e-root-3rd-inv",
     "major7-chord-a-root-0th-inv",
+    "major7-chord-a-root-1st-inv",
+    "major7-chord-a-root-2nd-inv",
+    "major7-chord-a-root-3rd-inv",
     "major7-chord-d-root-0th-inv",
     "major7-chord-d-root-1st-inv",
     "major7-chord-d-root-2nd-inv",
@@ -200,9 +203,9 @@ def load_temp(*forms):
 
 
 class ShippedConfigTests(SimpleTestCase):
-    def test_85_configs_load_and_validate(self):
+    def test_88_configs_load_and_validate(self):
         fingerings = theory.load_fingerings()
-        self.assertEqual(len(fingerings), 85)
+        self.assertEqual(len(fingerings), 88)
 
     def test_count_by_category(self):
         """3 E-root + 3 A-root finger forms for each of the major and
