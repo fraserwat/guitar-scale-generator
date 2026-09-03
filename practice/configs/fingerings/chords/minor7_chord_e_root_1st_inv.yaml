@@ -1,6 +1,7 @@
-# Source: Shalfi's Guitar Lesson Materials, "7th chord worksheet" —
-# Gm7 1st inv (E-root voicing), transposed from G to the example key A
-# (shift +2 frets; shape unchanged). Bass = C (minor 3rd) on E string.
+# Derived from dominant7-chord-e-root-1st-inv by flatting the 3rd
+# (E-string fret 9 -> 8, which is also this inversion's bass note):
+# minor7 = dominant7 with a b3 instead of a maj3. Uses strings E-A-D-G
+# (mutes B and high e — not E-D-G-B).
 id: minor7-chord-e-root-1st-inv
 scale: minor7_chord_1st_inv   # scale id from ../../scales.yaml
 name: "Minor 7 — 1st Inversion (E-root)"
@@ -8,8 +9,8 @@ anchor: root_low_e
 example_key: A
 tab:
   E: [8]
-  A: []
+  A: [10]
   D: [7]
   G: [9]
-  B: [8]
+  B: []
   e: []

@@ -1,6 +1,7 @@
-# Source: Shalfi's Guitar Lesson Materials, "7th chord worksheet" —
-# Gm7b5 2nd inv (E-root voicing), transposed from G to the example key A
-# (shift +2 frets; shape unchanged). Bass = Eb (b5) on E string.
+# Derived from minor7-chord-e-root-2nd-inv by flatting the 5th
+# (E-string fret 12 -> 11, which is also this inversion's bass note):
+# minor7b5 = minor7 with a b5 instead of a perfect 5th. Uses strings
+# E-A-D-G (mutes B and high e — not E-D-G-B).
 id: minor7b5-chord-e-root-2nd-inv
 scale: minor7b5_chord_2nd_inv   # scale id from ../../scales.yaml
 name: "Minor 7b5 — 2nd Inversion (E-root)"
@@ -8,8 +9,8 @@ anchor: root_low_e
 example_key: A
 tab:
   E: [11]
-  A: []
+  A: [12]
   D: [10]
   G: [12]
-  B: [10]
+  B: []
   e: []

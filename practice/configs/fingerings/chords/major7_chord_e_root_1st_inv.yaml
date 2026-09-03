@@ -1,6 +1,6 @@
-# Source: Shalfi's Guitar Lesson Materials, "7th chord worksheet" —
-# Gmaj7 1st inv (E-root voicing), transposed from G to the example key A
-# (shift +2 frets; shape unchanged). Bass = C# (major 3rd) on E string.
+# Source: jazz-guitar-licks.com drop 2 diagram (E-root voicing), key F,
+# transposed to the example key A. Bass = C# (major 3rd) on E string.
+# Uses strings E-A-D-G (mutes B and high e — not E-D-G-B).
 id: major7-chord-e-root-1st-inv
 scale: major7_chord_1st_inv   # scale id from ../../scales.yaml
 name: "Major 7 — 1st Inversion (E-root)"
@@ -8,8 +8,8 @@ anchor: root_low_e
 example_key: A
 tab:
   E: [9]
-  A: []
+  A: [11]
   D: [7]
   G: [9]
-  B: [9]
+  B: []
   e: []

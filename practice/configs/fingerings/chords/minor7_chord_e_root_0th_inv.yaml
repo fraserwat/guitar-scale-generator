@@ -1,6 +1,6 @@
-# Source: Shalfi's Guitar Lesson Materials, "7th chord worksheet" —
-# Gm7 root position (E-root voicing), transposed from G to the example key A
-# (shift +2 frets; shape unchanged). Bass = A (root) on E string.
+# Derived from dominant7-chord-e-root-0th-inv by flatting the 3rd
+# (G-string fret 6 -> 5): minor7 = dominant7 with a b3 instead of a
+# maj3. Uses strings E-A-D-G (mutes B and high e — not E-D-G-B).
 id: minor7-chord-e-root-0th-inv
 scale: minor7_chord_0th_inv   # scale id from ../../scales.yaml
 name: "Minor 7 — Root Position (E-root)"
@@ -8,8 +8,8 @@ anchor: root_low_e
 example_key: A
 tab:
   E: [5]
-  A: []
+  A: [7]
   D: [5]
   G: [5]
-  B: [5]
+  B: []
   e: []

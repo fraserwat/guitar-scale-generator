@@ -1,6 +1,7 @@
-# Source: Shalfi's Guitar Lesson Materials, "7th chord worksheet" —
-# Gdim7 root position (E-root voicing), transposed from G to the example key
-# A (shift +2 frets; shape unchanged). Bass = A (root) on E string.
+# Derived from minor7b5-chord-e-root-0th-inv by flatting the 7th
+# (D-string fret 5 -> 4): diminished7 = minor7b5 with a diminished
+# (double-flat) 7th instead of a b7. Uses strings E-A-D-G (mutes B and
+# high e — not E-D-G-B).
 id: diminished7-chord-e-root-0th-inv
 scale: diminished7_chord_0th_inv   # scale id from ../../scales.yaml
 name: "Diminished 7 — Root Position (E-root)"
@@ -8,8 +9,8 @@ anchor: root_low_e
 example_key: A
 tab:
   E: [5]
-  A: []
+  A: [6]
   D: [4]
   G: [5]
-  B: [4]
+  B: []
   e: []

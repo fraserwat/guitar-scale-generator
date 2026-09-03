@@ -1,0 +1,15 @@
+# Derived from minor7b5-chord-a-root-0th-inv by flatting the 7th
+# (G-string fret 12 -> 11): diminished7 = minor7b5 with a diminished
+# (double-flat) 7th instead of a b7.
+id: diminished7-chord-a-root-0th-inv
+scale: diminished7_chord_0th_inv   # scale id from ../../scales.yaml
+name: "Diminished 7 — Root Position (A-root)"
+anchor: root_low_a
+example_key: A
+tab:
+  E: []
+  A: [12]
+  D: [13]
+  G: [11]
+  B: [13]
+  e: []
