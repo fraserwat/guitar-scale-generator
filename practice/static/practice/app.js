@@ -101,14 +101,35 @@
   // nStrings are shared: that axis (now the rotated view's width) already
   // fit fine.
   var NECK_MOBILE = {
-    left: 16, top: NECK.top,
-    fretW: 30, stringGap: NECK.stringGap,
+    // top: desktop's 25 was breathing room before a fret-axis-oriented
+    // diagram; here it's pure margin on the rotated view's WIDTH axis
+    // (space past the high-e string, before the panel's right edge) —
+    // trimmed tighter since mobile has less width to spare.
+    // stringGap: wider than desktop's 30, not narrower — the panel
+    // shrink-wraps to the content's aspect ratio (style.css), so a
+    // narrow string span just shrink-wraps to a narrow panel. Sized so
+    // the string span roughly matches the fret span (~6*fretW): a
+    // near-square grid, which is also the natural read for a
+    // chord/scale-box diagram, so the room freed by smaller/left-
+    // aligned labels goes into the grid growing, not blank margin.
+    left: 16, top: 10,
+    fretW: 30, stringGap: 36,
     nFrets: NECK.nFrets, nStrings: NECK.nStrings
   };
   NECK_MOBILE.right = NECK_MOBILE.left + NECK_MOBILE.nFrets * NECK_MOBILE.fretW;
-  NECK_MOBILE.bottom = NECK.bottom;
-  var NECK_MOBILE_W = NECK_MOBILE.right + NECK_MOBILE.left; // symmetric trailing margin
-  var LABEL_GAP = 35, NECK_MOBILE_LABEL_GAP = 14; // space below the grid the label sits at
+  NECK_MOBILE.bottom = NECK_MOBILE.top + (NECK_MOBILE.nStrings - 1) * NECK_MOBILE.stringGap;
+  var NECK_MOBILE_H = NECK_MOBILE.right + NECK_MOBILE.left; // rotated view's HEIGHT axis
+  var LABEL_GAP = 35; // desktop: space below the grid the label sits at
+
+  // Rotated view's WIDTH axis: left inset, left-aligned label column, a
+  // small gap, then the string span (NECK_MOBILE.bottom) — replaces
+  // desktop's NECK_H (240) as both the transform's translate amount and
+  // the mobile viewBox width, so this axis is sized for what the labels
+  // actually need instead of inheriting an unrelated desktop dimension.
+  var MOBILE_LEFT_INSET = 3;
+  var MOBILE_LABEL_W = 13, MOBILE_LABEL_GAP = 5; // reserved digit width + gap to the grid
+  var MOBILE_ROT_WIDTH = MOBILE_LEFT_INSET + MOBILE_LABEL_W + MOBILE_LABEL_GAP
+    + NECK_MOBILE.bottom;
 
   function el(name, attrs, text) {
     var node = document.createElementNS(SVG_NS, name);
@@ -164,7 +185,7 @@
     var mobile = MOBILE_QUERY.matches;
     var geo = mobile ? NECK_MOBILE : NECK;
     neckSvg.setAttribute("viewBox", mobile
-      ? "0 0 " + NECK_H + " " + NECK_MOBILE_W
+      ? "0 0 " + MOBILE_ROT_WIDTH + " " + NECK_MOBILE_H
       : "0 0 " + NECK_W + " " + NECK_H);
 
     // Dot fills (CSS references these by id); redrawn with the neck.
@@ -181,7 +202,7 @@
     if (mobile) {
       root = el("g", {
         id: "neck-rotate",
-        transform: "translate(" + NECK_H + ",0) rotate(90)"
+        transform: "translate(" + MOBILE_ROT_WIDTH + ",0) rotate(90)"
       });
       neckSvg.appendChild(root);
     }
@@ -206,15 +227,19 @@
     // Fret-number labels under each fret space, hidden during the question
     // phase. reveal() unhides the group; each new round redraws the neck so
     // they start hidden again. On mobile each label gets its own counter
-    // -90° so the parent's rotation cancels out and the digits stay upright;
-    // it also sits on a tighter gap/smaller font (style.css) so it doesn't
-    // eat into the grid's share of the rotated view's width.
+    // -90° so the parent's rotation cancels out and the digits stay upright
+    // — and left-aligned (not centred): the label column is a reserved
+    // width (MOBILE_LABEL_W) on the rotated view's WIDTH axis, so a
+    // centred anchor would waste half that column as symmetric padding
+    // on both sides of the digits instead of letting the grid claim it.
     var labels = el("g", { id: "fret-labels", display: "none" });
-    var labelGap = mobile ? NECK_MOBILE_LABEL_GAP : LABEL_GAP;
+    var ly = mobile ? MOBILE_ROT_WIDTH - MOBILE_LEFT_INSET : geo.bottom + LABEL_GAP;
     for (var f = 0; f < geo.nFrets; f++) {
       var lx = geo.left + (f + 0.5) * geo.fretW;
-      var ly = geo.bottom + labelGap;
-      var attrs = { x: lx, y: ly, "text-anchor": "middle", "class": "fret-label" };
+      var attrs = {
+        x: lx, y: ly, "class": "fret-label",
+        "text-anchor": mobile ? "start" : "middle"
+      };
       if (mobile) attrs.transform = "rotate(-90," + lx + "," + ly + ")";
       labels.appendChild(el("text", attrs, String(windowStart + f)));
     }

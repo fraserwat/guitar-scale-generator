@@ -434,56 +434,6 @@ body {
 /* Clicks pass through the locked Start so the wrapper can shake the bubble. */
 #start-btn:disabled { pointer-events: none; }
 
-/* Mobile layout breakpoint. Single source of truth — later mobile rules
-   (TAB, fretboard orientation) key off this same value. */
-@media (max-width: 640px) {
-  .app-title { justify-self: center; }
-  .hint { display: none; }
-  .exercise-groups { grid-template-columns: 1fr; }
-  .exercise-group h3.group-heading,
-  .exercise-group > .exercise-option:not(.category-toggle) { display: none; }
-  .category-toggle { display: flex; }
-  /* Category tickboxes read as one list under "Practice Exercises",
-     not three separate panels — drop the desktop group border. */
-  .exercise-group { border: none; padding: 0; }
-  /* Fretboard-only game screen. Hide the staff itself, not .tab-wrap —
-     #tab-bubble (round-1 coaching hint + fetch-error notice) lives in
-     that wrapper and must keep working. */
-  #tab { display: none; }
-  /* Rotated fret labels sit in the view's WIDTH margin (see app.js
-     NECK_MOBILE) — smaller text so more of that width goes to the grid. */
-  .neck .fret-label { font-size: 11px; }
-
-  /* Game screen: let the fretboard fill the viewport instead of being
-     sized by width alone (the previous width:100%;height:auto rule left
-     it undersized on both axes, with dead space beside and below it).
-     .app's desktop centring grid (flexible spacer rows) only centres
-     fixed-size content — it doesn't grow it, so it's swapped out here
-     for a plain fill column. The SVG's own default
-     preserveAspectRatio="xMidYMid meet" then contain-fits the diagram
-     into whatever box .neck ends up with — no JS/ResizeObserver needed. */
-  .app:has(#exercise-screen:not(.hidden)) {
-    height: 100dvh;
-    grid-template-rows: auto 1fr;
-  }
-  #exercise-screen {
-    grid-row: 2;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-  #exercise-screen > .exercise-top,
-  #exercise-screen > .tab-wrap,
-  #exercise-screen > .judge-buttons {
-    flex-shrink: 0;
-  }
-  .neck {
-    flex: 1 1 auto;
-    min-height: 0;
-    height: 100%;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .seg-option, .seg-thumb, .exercise-box, .exercise-name,
   .group-toggle { transition: none; }
@@ -844,4 +794,77 @@ kbd {
 .result-name { font-weight: 600; }
 .result-meta { font-size: var(--text-sm); color: var(--muted); }
 .result-direction { color: var(--accent); font-style: italic; }
+
+/* Mobile layout breakpoint. Single source of truth — later mobile rules
+   (TAB, fretboard orientation) key off this same value.
+   Deliberately last in the file: several of these override earlier
+   unconditional rules (.neck width/height, .fret-label font-size) on
+   properties those rules also set — same specificity, so without this
+   the desktop rule would win the cascade tie by simply appearing later
+   in source order, regardless of the media query. Keep new mobile
+   overrides in this block, and keep this block last. */
+@media (max-width: 640px) {
+  .app-title { justify-self: center; }
+  .hint { display: none; }
+  .exercise-groups { grid-template-columns: 1fr; }
+  .exercise-group h3.group-heading,
+  .exercise-group > .exercise-option:not(.category-toggle) { display: none; }
+  .category-toggle { display: flex; }
+  /* Category tickboxes read as one list under "Practice Exercises",
+     not three separate panels — drop the desktop group border. */
+  .exercise-group { border: none; padding: 0; }
+  /* Fretboard-only game screen. Hide the staff itself, not .tab-wrap —
+     #tab-bubble (round-1 coaching hint + fetch-error notice) lives in
+     that wrapper and must keep working. */
+  #tab { display: none; }
+  /* Rotated fret labels sit in a reserved column on the view's WIDTH
+     axis (see app.js MOBILE_LABEL_W) — closer to the buttons' text
+     size than the desktop diagram's, so the column stays small and the
+     grid gets the rest. */
+  .neck .fret-label { font-size: 9px; }
+
+  /* Game screen: let the fretboard fill the viewport instead of being
+     sized by width alone (the previous width:100%;height:auto rule left
+     it undersized on both axes, with dead space beside and below it).
+     .app's desktop centring grid (flexible spacer rows) only centres
+     fixed-size content — it doesn't grow it, so it's swapped out here
+     for a plain fill column. The SVG's own default
+     preserveAspectRatio="xMidYMid meet" then contain-fits the diagram
+     into whatever box .neck ends up with — no JS/ResizeObserver needed. */
+  .app:has(#exercise-screen:not(.hidden)) {
+    height: 100dvh;
+    grid-template-rows: auto 1fr;
+  }
+  #exercise-screen {
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  #exercise-screen > .exercise-top,
+  #exercise-screen > .tab-wrap,
+  #exercise-screen > .judge-buttons {
+    flex-shrink: 0;
+  }
+  /* flex-basis: 0 (not auto) is load-bearing — with auto, the browser
+     read the SVG's own aspect-ratio-implied intrinsic height as the
+     basis and let it win over the flex box, pushing the page past
+     100dvh. A zero basis makes flex-grow/shrink the only inputs, so
+     the resolved height is a hard ceiling, never overflow-driven.
+     width: auto (overriding the shared width:100% rule) then derives
+     the panel's width FROM that height via the svg's own intrinsic
+     aspect ratio (viewBox), same mechanism as height:auto normally
+     derives from width — so the panel shrink-wraps to exactly the
+     diagram's proportions instead of staying full-width with
+     preserveAspectRatio letterboxing blank panel space on the sides. */
+  .neck {
+    flex: 1 1 0;
+    min-height: 0;
+    width: auto;
+    /* align-items' default (stretch) forces the cross-axis size to fill
+       the container regardless of width:auto — override just this item
+       so its width is actually free to derive from the resolved height. */
+    align-self: center;
+  }
+}
 
