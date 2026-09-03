@@ -83,15 +83,32 @@
   };
   NECK.right = NECK.left + NECK.nFrets * NECK.fretW;
   NECK.bottom = NECK.top + (NECK.nStrings - 1) * NECK.stringGap;
-  var NECK_W = 560, NECK_H = 240; // desktop viewBox dims; mobile swaps them
+  var NECK_W = 560, NECK_H = 240; // desktop viewBox dims
 
   // Mobile: same neck, rotated 90° clockwise (chord-chart convention — nut
   // at top, frets increase downward, low E left / high e right) via one
-  // wrapping <g transform>, not a second coordinate system. Every drawing
-  // function below stays in the original left-to-right/top-to-bottom
-  // coordinate space; this group is the only place the rotation happens.
-  // Text is the one thing the rotation would turn sideways, so fret
-  // labels get an individual counter -90° about their own anchor point.
+  // wrapping <g transform>, not a second coordinate system — drawNeck()/
+  // drawNotes() stay in the original left-to-right/top-to-bottom coordinate
+  // space; the group is the only place the rotation happens. Text is the
+  // one thing the rotation would turn sideways, so fret labels get an
+  // individual counter -90° about their own anchor point.
+  //
+  // The fret axis becomes the rotated view's HEIGHT, and desktop's spacing
+  // (tuned for a wide horizontal strip) rendered as an unusably tall,
+  // scrolling column on an actual phone. NECK_MOBILE is a denser profile
+  // for that axis only — same 6-fret window (shapes can span the full
+  // window, so nFrets can't shrink), tighter fretW/left. top/stringGap/
+  // nStrings are shared: that axis (now the rotated view's width) already
+  // fit fine.
+  var NECK_MOBILE = {
+    left: 16, top: NECK.top,
+    fretW: 30, stringGap: NECK.stringGap,
+    nFrets: NECK.nFrets, nStrings: NECK.nStrings
+  };
+  NECK_MOBILE.right = NECK_MOBILE.left + NECK_MOBILE.nFrets * NECK_MOBILE.fretW;
+  NECK_MOBILE.bottom = NECK.bottom;
+  var NECK_MOBILE_W = NECK_MOBILE.right + NECK_MOBILE.left; // symmetric trailing margin
+  var LABEL_GAP = 35, NECK_MOBILE_LABEL_GAP = 14; // space below the grid the label sits at
 
   function el(name, attrs, text) {
     var node = document.createElementNS(SVG_NS, name);
@@ -101,8 +118,8 @@
   }
 
   // y coordinate for a string number (1 = high e at top ... 6 = low E at bottom)
-  function stringY(stringNum) {
-    return NECK.top + (stringNum - 1) * NECK.stringGap;
+  function stringY(geo, stringNum) {
+    return geo.top + (stringNum - 1) * geo.stringGap;
   }
 
   /** First fret shown on the neck. The window is 6 frets wide; a 4-fret
@@ -145,8 +162,9 @@
   function drawNeck(windowStart) {
     neckSvg.textContent = "";
     var mobile = MOBILE_QUERY.matches;
+    var geo = mobile ? NECK_MOBILE : NECK;
     neckSvg.setAttribute("viewBox", mobile
-      ? "0 0 " + NECK_H + " " + NECK_W
+      ? "0 0 " + NECK_H + " " + NECK_MOBILE_W
       : "0 0 " + NECK_W + " " + NECK_H);
 
     // Dot fills (CSS references these by id); redrawn with the neck.
@@ -169,18 +187,18 @@
     }
 
     // Fret lines (vertical). Leftmost line is fret wire windowStart - 1.
-    for (var i = 0; i <= NECK.nFrets; i++) {
-      var x = NECK.left + i * NECK.fretW;
+    for (var i = 0; i <= geo.nFrets; i++) {
+      var x = geo.left + i * geo.fretW;
       root.appendChild(el("line", {
-        x1: x, y1: NECK.top, x2: x, y2: NECK.bottom,
+        x1: x, y1: geo.top, x2: x, y2: geo.bottom,
         "class": "fret-line", "stroke-width": i === 0 ? 4 : 2
       }));
     }
 
     // Strings (horizontal), thicker towards low E.
-    for (var s = 1; s <= NECK.nStrings; s++) {
+    for (var s = 1; s <= geo.nStrings; s++) {
       root.appendChild(el("line", {
-        x1: NECK.left, y1: stringY(s), x2: NECK.right, y2: stringY(s),
+        x1: geo.left, y1: stringY(geo, s), x2: geo.right, y2: stringY(geo, s),
         "class": "string-line", "stroke-width": 1 + (s - 1) * 0.4
       }));
     }
@@ -188,11 +206,14 @@
     // Fret-number labels under each fret space, hidden during the question
     // phase. reveal() unhides the group; each new round redraws the neck so
     // they start hidden again. On mobile each label gets its own counter
-    // -90° so the parent's rotation cancels out and the digits stay upright.
+    // -90° so the parent's rotation cancels out and the digits stay upright;
+    // it also sits on a tighter gap/smaller font (style.css) so it doesn't
+    // eat into the grid's share of the rotated view's width.
     var labels = el("g", { id: "fret-labels", display: "none" });
-    for (var f = 0; f < NECK.nFrets; f++) {
-      var lx = NECK.left + (f + 0.5) * NECK.fretW;
-      var ly = NECK.bottom + 35;
+    var labelGap = mobile ? NECK_MOBILE_LABEL_GAP : LABEL_GAP;
+    for (var f = 0; f < geo.nFrets; f++) {
+      var lx = geo.left + (f + 0.5) * geo.fretW;
+      var ly = geo.bottom + labelGap;
       var attrs = { x: lx, y: ly, "text-anchor": "middle", "class": "fret-label" };
       if (mobile) attrs.transform = "rotate(-90," + lx + "," + ly + ")";
       labels.appendChild(el("text", attrs, String(windowStart + f)));
@@ -211,6 +232,8 @@
    *  draws the run's direction: notes arrive ascending, so Descending
    *  just reverses the stagger index. */
   function drawNotes(round) {
+    var mobile = MOBILE_QUERY.matches;
+    var geo = mobile ? NECK_MOBILE : NECK;
     var start = viewStart(round);
     var last = round.notes.length - 1;
     var dots = el("g", {
@@ -218,8 +241,8 @@
       style: "--cascade-step:" + cascadeStep(round.notes.length) + "ms"
     });
     round.notes.forEach(function (note, idx) {
-      var cx = NECK.left + (note.fret - start + 0.5) * NECK.fretW;
-      var cy = stringY(note.string);
+      var cx = geo.left + (note.fret - start + 0.5) * geo.fretW;
+      var cy = stringY(geo, note.string);
       var order = round.direction == null ? 0
         : round.direction === "Descending" ? last - idx : idx;
       var dot = el("circle", {
@@ -231,8 +254,7 @@
       dot.appendChild(el("title", {}, note.note_name));
       dots.appendChild(dot);
     });
-    var root = MOBILE_QUERY.matches
-      ? neckSvg.querySelector("#neck-rotate") : neckSvg;
+    var root = mobile ? neckSvg.querySelector("#neck-rotate") : neckSvg;
     root.appendChild(dots);
   }
 

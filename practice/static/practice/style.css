@@ -450,6 +450,9 @@ body {
      #tab-bubble (round-1 coaching hint + fetch-error notice) lives in
      that wrapper and must keep working. */
   #tab { display: none; }
+  /* Rotated fret labels sit in the view's WIDTH margin (see app.js
+     NECK_MOBILE) — smaller text so more of that width goes to the grid. */
+  .neck .fret-label { font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
