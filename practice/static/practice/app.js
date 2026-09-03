@@ -135,17 +135,15 @@
   // desktop's NECK_H (240) as both the transform's translate amount and
   // the mobile viewBox width, so this axis is sized for what the labels
   // actually need instead of inheriting an unrelated desktop dimension.
-  // Split 3/14 -> 4/13: a touch more breathing room before the digit,
-  // a touch less between it and the grid (INSET + GAP unchanged, so
-  // MOBILE_ROT_WIDTH — confirmed right — doesn't move at all).
-  var MOBILE_LEFT_INSET = 4;
+  // Split 4/13 -> 6/11: shifted further right (INSET + GAP unchanged,
+  // so MOBILE_ROT_WIDTH — confirmed right — doesn't move at all).
+  // GAP must still clear the root dot's full bleed (radius 10 + stroke
+  // 2 => ~11 past the string line, the biggest mark that can land on
+  // the leftmost/low-E string) plus a small buffer — 11 is right at
+  // that floor, verify against a revealed round before pushing further.
+  var MOBILE_LEFT_INSET = 6;
   var MOBILE_LABEL_W = 13;
-  // Gap to the grid must clear the root dot's full bleed (radius 10 +
-  // stroke 2 => ~11 past the string line, the biggest mark that can sit
-  // on the leftmost/low-E string) plus a small fixed buffer, not just
-  // "some gap" — otherwise a dot there visually collides with the label
-  // (confirmed against real device-emulation screenshots).
-  var MOBILE_LABEL_GAP = 13;
+  var MOBILE_LABEL_GAP = 11;
   var MOBILE_ROT_WIDTH = MOBILE_LEFT_INSET + MOBILE_LABEL_W + MOBILE_LABEL_GAP
     + NECK_MOBILE.bottom;
 

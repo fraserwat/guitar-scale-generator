@@ -820,8 +820,13 @@ kbd {
   /* Rotated fret labels sit in a reserved column on the view's WIDTH
      axis (see app.js MOBILE_LABEL_W) — closer to the buttons' text
      size than the desktop diagram's, so the column stays small and the
-     grid gets the rest. */
-  .neck .fret-label { font-size: 9px; }
+     grid gets the rest. dominant-baseline: central re-centres the
+     glyph on its own y-coordinate (which becomes the ROW position
+     after rotation) instead of the default baseline-aligned behaviour
+     — digits have no descender, so baseline-aligned text sits with its
+     whole visible body above that point, reading as biased toward the
+     top of its fret row instead of centred in it. */
+  .neck .fret-label { font-size: 9px; dominant-baseline: central; }
 
   /* Game screen: let the fretboard fill the viewport instead of being
      sized by width alone (the previous width:100%;height:auto rule left
