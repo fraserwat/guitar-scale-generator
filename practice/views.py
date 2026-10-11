@@ -9,6 +9,13 @@ from . import theory
 
 CHORD_MENU_GROUP_LABELS = {"core_diatonic": "Core Diatonic", "altered": "Altered"}
 
+# Picker heading for each form category. Four categories, three headings:
+# pentatonic and scale forms both sit under Scales, so the draw treats them
+# as one parent. Every category needs an entry, so an unknown one fails
+# loudly instead of quietly drawing from a heading the picker never shows.
+PARENT_BY_CATEGORY = {"pentatonic": "Scales", "scale": "Scales",
+                      "arpeggio": "Arpeggios", "chord": "Chord Inv."}
+
 
 def _exercise_groups():
     """Group configured scales for the start-menu exercise picker.
@@ -41,6 +48,18 @@ def _exercise_groups():
     return groups
 
 
+def _pick_form_id(form_ids, fingerings):
+    """Draw a form id parent-first: a picker parent uniformly, then a form
+    uniformly within it. Keeps Chord Inv.'s 60 variations from swamping the
+    scale and arpeggio forms when everything is ticked.
+    """
+    pools = {}
+    for form_id in form_ids:
+        parent = PARENT_BY_CATEGORY[fingerings[form_id]["category"]]
+        pools.setdefault(parent, []).append(form_id)
+    return random.choice(random.choice(list(pools.values())))
+
+
 def index(request):
     """Single-page practice game."""
     return render(request, "practice/index.html",
@@ -51,8 +70,9 @@ def index(request):
 def api_round(request):
     """Return a randomised practice round as JSON.
 
-    A round = (fingering form, key, direction), each drawn uniformly at
-    random (the form pool optionally narrowed by ?scales=).
+    A round = (fingering form, key, direction). The form is drawn
+    parent-first (see _pick_form_id); key and direction are uniform. The
+    form pool is optionally narrowed by ?scales=.
     """
     fingerings = theory.load_fingerings()
     scales = theory.load_scales()
@@ -84,7 +104,7 @@ def api_round(request):
                 "scales": "No playable forms for scale id(s): "
                           f"{sorted(wanted)}.",
             }}, status=400)
-    form_id = random.choice(form_ids)
+    form_id = _pick_form_id(form_ids, fingerings)
     key = random.choice(theory.KEYS)
     # Accidental (black-key) roots: 50% chance to present the flat enharmonic
     # spelling instead (e.g. Gb rather than F#). Natural keys are unchanged —

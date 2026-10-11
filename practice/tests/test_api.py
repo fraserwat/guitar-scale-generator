@@ -1,12 +1,14 @@
 """Tests for the page and API endpoints."""
 
+from collections import Counter
+import itertools
 from unittest import mock
 
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 
 import random
 
-from practice import theory
+from practice import theory, views
 
 ROUND_KEYS = {"scale", "key", "direction", "form_id",
               "category", "display_label", "caged_shape", "starting_finger",
@@ -260,11 +262,13 @@ class RoundApiTests(ValidRoundMixin, TestCase):
         self.assert_valid_round(resp.json())
 
     def test_round_randomisation_stays_in_domain(self):
-        num_forms = len(theory.load_fingerings())
-        # Coupon-collector draw count: enough that P(any one form is never
-        # drawn) stays negligible as shipped content grows, rather than a
-        # fixed count that gets flakier every time a form is added.
-        draws = num_forms * 40
+        # Coupon-collector draw count. The rarest form is drawn with
+        # probability 1 / (parents * largest parent), so 40 expected hits for
+        # it keeps P(never drawn) negligible as shipped content grows.
+        parent_sizes = Counter(
+            views.PARENT_BY_CATEGORY[form["category"]]
+            for form in theory.load_fingerings().values())
+        draws = len(parent_sizes) * max(parent_sizes.values()) * 40
         seen = {"scales": set(), "directions": set(), "forms": set(),
                 "keys": set(), "categories": set()}
         for _ in range(draws):
@@ -349,6 +353,87 @@ class ChordRoundApiTests(TestCase):
         self.assertEqual(data["category"], "chord")
         self.assertIsNone(data["direction"])
         self.assertEqual(data["display_label"], "E Root (1st Inversion)")
+
+
+class PickFormIdTests(SimpleTestCase):
+    """_pick_form_id: a picker parent first, then a form inside it."""
+
+    def setUp(self):
+        self.fingerings = theory.load_fingerings()
+        self.by_parent = {}
+        for form_id, form in self.fingerings.items():
+            parent = views.PARENT_BY_CATEGORY[form["category"]]
+            self.by_parent.setdefault(parent, []).append(form_id)
+
+    def scripted_draw(self, form_ids, parent_index, form_index):
+        """Run _pick_form_id with both random.choice draws forced by index.
+        Returns (drawn form id, the sequences the two draws were offered)."""
+        offered = []
+
+        def choose(seq):
+            offered.append(seq)
+            return seq[parent_index if len(offered) == 1 else form_index]
+
+        with mock.patch("practice.views.random.choice", side_effect=choose):
+            form_id = views._pick_form_id(form_ids, self.fingerings)
+        return form_id, offered
+
+    def test_every_parent_subset_reaches_each_form_exactly_once(self):
+        """Every non-empty set of parents (as ?scales= can narrow to) walks
+        its full (parent, index) grid. Cell (i, j) must draw the j-th form of
+        the i-th parent, so the cells cover the pool with no gaps or
+        repeats."""
+        parents = sorted(self.by_parent)
+        subsets = [subset for size in range(1, len(parents) + 1)
+                   for subset in itertools.combinations(parents, size)]
+        for subset in subsets:
+            form_ids = [f for p in subset for f in self.by_parent[p]]
+            parent_pools = [self.by_parent[p] for p in subset]
+            for i, parent in enumerate(subset):
+                for j, expected in enumerate(self.by_parent[parent]):
+                    with self.subTest(parents=subset, parent=parent, index=j):
+                        form_id, offered = self.scripted_draw(form_ids, i, j)
+                        self.assertEqual(form_id, expected)
+                        self.assertEqual(
+                            offered, [parent_pools, self.by_parent[parent]])
+
+    def test_full_pool_parents_are_equally_likely(self):
+        """Seeded draws over the whole pool (the everything-ticked case):
+        each parent ~1/3, and each form ~1/(3 * parent size). The old
+        form-uniform draw gave chord forms ~1/107; this catches that."""
+        rng = random.Random(20261011)
+        form_ids = list(self.fingerings)
+        draws = 60000
+        parent_counts = Counter()
+        form_counts = Counter()
+        with mock.patch("practice.views.random", rng):
+            for _ in range(draws):
+                form_id = views._pick_form_id(form_ids, self.fingerings)
+                parent = views.PARENT_BY_CATEGORY[
+                    self.fingerings[form_id]["category"]]
+                parent_counts[parent] += 1
+                form_counts[form_id] += 1
+        for parent, forms in self.by_parent.items():
+            with self.subTest(parent=parent):
+                self.assertAlmostEqual(
+                    parent_counts[parent] / draws, 1 / 3, delta=0.01)
+                expected = 1 / (3 * len(forms))
+                for form_id in forms:
+                    self.assertAlmostEqual(
+                        form_counts[form_id] / draws, expected,
+                        delta=expected * 0.25)
+
+
+class PickerParentTests(SimpleTestCase):
+    """The draw's parents must be exactly the picker's headings."""
+
+    def test_every_form_category_has_a_picker_parent(self):
+        categories = {f["category"] for f in theory.load_fingerings().values()}
+        self.assertLessEqual(categories, set(views.PARENT_BY_CATEGORY))
+
+    def test_parents_match_picker_headings(self):
+        headings = {group["label"] for group in views._exercise_groups()}
+        self.assertEqual(set(views.PARENT_BY_CATEGORY.values()), headings)
 
 
 class RoundKeySpellingTests(TestCase):
@@ -568,7 +653,9 @@ class RoundFilterTests(ValidRoundMixin, TestCase):
         pools = [c.args[0] for c in spy.call_args_list
                  if c.args[0] is not theory.KEYS
                  and c.args[0] is not theory.DIRECTIONS]
-        self.assertEqual(pools, [expected])
+        # Parent draw sees one pool (the filtered parent), then the form draw
+        # sees that pool.
+        self.assertEqual(pools, [[expected], expected])
 
     def test_filter_post_still_405(self):
         resp = self.client.post("/api/round/?scales=major_scale")
