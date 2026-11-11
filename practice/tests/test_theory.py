@@ -440,13 +440,51 @@ class ARootFormLiteralTests(SimpleTestCase):
         })
 
 
+class ARootArpeggio4thFingerLiteralTests(SimpleTestCase):
+    """The A-string-root 4th finger seventh-chord arpeggios against the
+    hand-verified TABs from the source PDF ('A seventh chord arpeggios,
+    A string form')."""
+
+    maxDiff = None
+
+    def check_form(self, form_id, window_start, frets):
+        ws, notes = theory.resolve_form(form_id, "A")
+        self.assertEqual(ws, window_start)
+        self.assertEqual(frets_by_string(notes), frets)
+
+    def test_major7_a_root_4th_finger_form_matches_the_pdf(self):
+        self.check_form("major7-arpeggio-a-root-4th-finger-form", 9, {
+            5: [12], 4: [11], 3: [9], 2: [9, 10], 1: [9, 12],
+        })
+
+    def test_dominant7_a_root_4th_finger_form_matches_the_pdf(self):
+        self.check_form("dominant7-arpeggio-a-root-4th-finger-form", 9, {
+            5: [12], 4: [11], 3: [9, 12], 2: [10], 1: [9, 12],
+        })
+
+    def test_minor7_a_root_4th_finger_form_matches_the_pdf(self):
+        self.check_form("minor7-arpeggio-a-root-4th-finger-form", 8, {
+            5: [12], 4: [10], 3: [9, 12], 2: [10], 1: [8, 12],
+        })
+
+    def test_minor7b5_a_root_4th_finger_form_matches_the_pdf(self):
+        self.check_form("minor7b5-arpeggio-a-root-4th-finger-form", 8, {
+            5: [12], 4: [10], 3: [8, 12], 2: [10], 1: [8, 11],
+        })
+
+    def test_diminished7_a_root_4th_finger_form_matches_the_pdf(self):
+        self.check_form("diminished7-arpeggio-a-root-4th-finger-form", 8, {
+            5: [12], 4: [10], 3: [8, 11], 2: [10], 1: [8, 11],
+        })
+
+
 class ResolveFormExhaustiveTests(SimpleTestCase):
     """Every shipped form x all 12 keys, every note verified independently."""
 
     def test_every_form_every_key(self):
         fingerings = theory.load_fingerings()
         scales = theory.load_scales()
-        self.assertEqual(len(fingerings), 107)
+        self.assertEqual(len(fingerings), 112)
         for form_id, form in fingerings.items():
             intervals = set(scales[form["scale"]]["intervals"])
             all_offsets = [o for offs in form["offsets"].values() for o in offs]

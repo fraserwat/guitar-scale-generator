@@ -89,12 +89,12 @@ VALID_CHORD_FORM = {
 
 # Shipped configs: the E-string-root and A-string-root finger forms of the
 # major and natural minor scales, the five seventh-chord arpeggios in 1st,
-# 2nd and 4th finger E-root forms plus a 1st finger A-root form (hand-authored
-# TABs derived from the same-finger major-scale forms), the five CAGED boxes
+# 2nd and 4th finger forms on both E-root and A-root (hand-authored TABs
+# derived from the same-finger major-scale forms), the five CAGED boxes
 # of each pentatonic scale, and the shipped Chord Inv. forms: all four
 # inversions of major7/minor7/dominant7/minor7b5/diminished7 on E-root,
 # A-root and D-root.
-EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 25, "pentatonic": 10, "chord": 60}
+EXPECTED_FORM_COUNTS = {"scale": 12, "arpeggio": 30, "pentatonic": 10, "chord": 60}
 EXPECTED_FORM_IDS = {
     "major7-chord-e-root-0th-inv",
     "major7-chord-e-root-1st-inv",
@@ -198,6 +198,11 @@ EXPECTED_FORM_IDS = {
     "minor7-arpeggio-a-root-2nd-finger-form",
     "minor7b5-arpeggio-a-root-2nd-finger-form",
     "diminished7-arpeggio-a-root-2nd-finger-form",
+    "major7-arpeggio-a-root-4th-finger-form",
+    "dominant7-arpeggio-a-root-4th-finger-form",
+    "minor7-arpeggio-a-root-4th-finger-form",
+    "minor7b5-arpeggio-a-root-4th-finger-form",
+    "diminished7-arpeggio-a-root-4th-finger-form",
     "major7-arpeggio-e-root-4th-finger-form",
     "dominant7-arpeggio-e-root-4th-finger-form",
     "minor7-arpeggio-e-root-4th-finger-form",
@@ -221,15 +226,15 @@ def load_temp(*forms):
 
 
 class ShippedConfigTests(SimpleTestCase):
-    def test_107_configs_load_and_validate(self):
+    def test_112_configs_load_and_validate(self):
         fingerings = theory.load_fingerings()
-        self.assertEqual(len(fingerings), 107)
+        self.assertEqual(len(fingerings), 112)
 
     def test_count_by_category(self):
         """3 E-root + 3 A-root finger forms for each of the major and
         natural minor scales + 5 seventh-chord arpeggios in 1st, 2nd and
-        4th E-root finger forms plus 1st and 2nd A-root finger forms + 2
-        pentatonic scales x 5 CAGED boxes."""
+        4th E-root finger forms plus 1st, 2nd and 4th A-root finger forms
+        + 2 pentatonic scales x 5 CAGED boxes."""
         counts = {}
         for form in theory.load_fingerings().values():
             counts[form["category"]] = counts.get(form["category"], 0) + 1
@@ -247,7 +252,7 @@ class ShippedConfigTests(SimpleTestCase):
         """CAGED shapes / starting fingers are valid and never repeat
         within one (scale, anchor) group; the shipped major-scale forms
         are fingers 1, 2, 4 per root string and each seventh-chord
-        arpeggio ships fingers 1, 2, 4 (E-root) plus fingers 1, 2 (A-root).
+        arpeggio ships fingers 1, 2, 4 on both E-root and A-root.
         display_label stays unique within each scale — it's the only
         label the player sees."""
         by_scale = {}
@@ -268,11 +273,9 @@ class ShippedConfigTests(SimpleTestCase):
                     self.assertIn(shape, theory.CAGED_SHAPES, scale_id)
             elif category == "arpeggio":
                 self.assertIn(anchor, ("root_low_e", "root_low_a"), scale_id)
-                expected_fingers = (
-                    [1, 2] if anchor == "root_low_a" else [1, 2, 4])
                 self.assertEqual(
                     sorted(f["starting_finger"] for f in forms),
-                    expected_fingers, scale_id)
+                    [1, 2, 4], scale_id)
             elif category == "chord":
                 # One pilot form per (scale, anchor) so far — no
                 # starting_finger/caged_shape to dedupe, just confirm the
